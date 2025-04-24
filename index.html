@@ -37,18 +37,20 @@
 <p class="p2"><span class="s1"></span><br></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Firebase configuration (replace with your own Firebase project config)</span></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const firebaseConfig = {</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>apiKey: "YOUR_API_KEY",</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>authDomain: "YOUR_AUTH_DOMAIN",</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>projectId: "YOUR_PROJECT_ID",</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>storageBucket: "YOUR_STORAGE_BUCKET",</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>messagingSenderId: "YOUR_MESSAGING_SENDER_ID",</span></p>
-<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>appId: "YOUR_APP_ID"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>apiKey: "AIzaSyDxOjvLjku6NPFmU20No0kJtk0cr5BgvKI",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>authDomain: "coffee-brew-tracker.firebaseapp.com",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>projectId: "coffee-brew-tracker",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>storageBucket: "coffee-brew-tracker.firebasestorage.app",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>messagingSenderId: "725897927336",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>appId: "1:725897927336:web:de7d287f60487c69a1809d"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>measurementId: "G-1RZTPYQEM6"</span></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>};</span></p>
 <p class="p2"><span class="s1"></span><br></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Initialize Firebase</span></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const app = firebase.initializeApp(firebaseConfig);</span></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const auth = firebase.auth();</span></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const db = firebase.firestore();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const analytics = firebase.getAnalytics(app);</span></p>
 <p class="p2"><span class="s1"></span><br></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Main App Component</span></p>
 <p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>function App() {</span></p>
