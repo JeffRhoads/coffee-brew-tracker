@@ -1,0 +1,305 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.4">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times; -webkit-text-stroke: #000000; min-height: 14.0px}
+    span.s1 {font-kerning: none}
+  </style>
+</head>
+<body>
+<p class="p1"><span class="s1">&lt;!DOCTYPE html&gt;</span></p>
+<p class="p1"><span class="s1">&lt;html lang="en"&gt;</span></p>
+<p class="p1"><span class="s1">&lt;head&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;title&gt;CoffeeBrew Tracker&lt;/title&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.5/babel.min.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"&gt;&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;meta name="apple-mobile-web-app-capable" content="yes"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;link rel="apple-touch-icon" href="https://via.placeholder.com/180x180.png?text=CoffeeBrew"&gt;</span></p>
+<p class="p1"><span class="s1">&lt;/head&gt;</span></p>
+<p class="p1"><span class="s1">&lt;body&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;div id="root" class="min-h-screen bg-gray-100"&gt;&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;script type="text/babel"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const { useState, useEffect } = React;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Firebase configuration (replace with your own Firebase project config)</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const firebaseConfig = {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>apiKey: "YOUR_API_KEY",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>authDomain: "YOUR_AUTH_DOMAIN",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>projectId: "YOUR_PROJECT_ID",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>storageBucket: "YOUR_STORAGE_BUCKET",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>messagingSenderId: "YOUR_MESSAGING_SENDER_ID",</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>appId: "YOUR_APP_ID"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Initialize Firebase</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const app = firebase.initializeApp(firebaseConfig);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const auth = firebase.auth();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>const db = firebase.firestore();</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Main App Component</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>function App() {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [user, setUser] = useState(null);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [brews, setBrews] = useState([]);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [form, setForm] = useState({</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>beanType: '', origin: '', roastDate: '', grindSize: '', brewType: 'Espresso', machine: '', rating: 1, comments: '', date: new Date().toISOString().split('T')[0]</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [email, setEmail] = useState('');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [password, setPassword] = useState('');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [isSignUp, setIsSignUp] = useState(false);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const [error, setError] = useState('');</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Listen for auth state changes</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>useEffect(() =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const unsubscribe = auth.onAuthStateChanged((user) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>setUser(user);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>if (user) fetchBrews(user.uid);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>return () =&gt; unsubscribe();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>}, []);</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Fetch brews from Firestore</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const fetchBrews = async (uid) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const brewsRef = db.collection('brews').where('userId', '==', uid);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const snapshot = await brewsRef.get();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const brewsData = snapshot.docs.map(doc =&gt; ({ id: doc.id, ...doc.data() }));</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>setBrews(brewsData.sort((a, b) =&gt; new Date(b.date) - new Date(a.date)));</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Handle form input changes</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const handleInputChange = (e) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>const { name, value } = e.target;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>setForm({ ...form, [name]: value });</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Add or update brew</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const handleSubmit = async (e) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>e.preventDefault();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>if (!user) return;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>await db.collection('brews').add({ ...form, userId: user.uid });</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>setForm({</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>beanType: '', origin: '', roastDate: '', grindSize: '', brewType: 'Espresso', machine: '', rating: 1, comments: '', date: new Date().toISOString().split('T')[0]</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>});</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>fetchBrews(user.uid);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} catch (err) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>setError('Failed to save brew');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Delete brew</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const deleteBrew = async (id) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>await db.collection('brews').doc(id).delete();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>fetchBrews(user.uid);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Handle authentication</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const handleAuth = async (e) =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>e.preventDefault();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>try {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>if (isSignUp) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>await auth.createUserWithEmailAndPassword(email, password);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>} else {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>await auth.signInWithEmailAndPassword(email, password);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>setError('');</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>} catch (err) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>setError(err.message);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Sign out</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>const signOut = () =&gt; {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>auth.signOut();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>setBrews([]);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>};</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Render auth form if not logged in</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>if (!user) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>return (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;div className="flex items-center justify-center min-h-screen"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;h2 className="text-2xl font-bold mb-4"&gt;{isSignUp ? 'Sign Up' : 'Log In'}&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;form onSubmit={handleAuth}&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>type="email"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>value={email}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>onChange={(e) =&gt; setEmail(e.target.value)}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>placeholder="Email"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>required</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>type="password"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>value={password}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>onChange={(e) =&gt; setPassword(e.target.value)}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>placeholder="Password"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>required</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>{isSignUp ? 'Sign Up' : 'Log In'}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;/form&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;button</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onClick={() =&gt; setIsSignUp(!isSignUp)}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="mt-4 text-blue-500 hover:underline"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>{isSignUp ? 'Already have an account? Log In' : 'Need an account? Sign Up'}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>{error &amp;&amp; &lt;p className="text-red-500 mt-4"&gt;{error}&lt;/p&gt;}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>// Render main app</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>return (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;div className="container mx-auto p-4"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;div className="flex justify-between items-center mb-6"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;h1 className="text-3xl font-bold"&gt;CoffeeBrew Tracker&lt;/h1&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;button onClick={signOut} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>Sign Out</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>{/* Add Brew Form */}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;div className="bg-white p-6 rounded-lg shadow-lg mb-6"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;h2 className="text-xl font-semibold mb-4"&gt;Add New Brew&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>type="text"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="beanType"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.beanType}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>placeholder="Bean Type (e.g., Illy Arabica)"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>type="text"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="origin"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.origin}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>placeholder="Origin (e.g., Ethiopia)"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>type="date"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="roastDate"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.roastDate}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>type="text"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="grindSize"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.grindSize}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>placeholder="Grind Size (e.g., Medium-Fine)"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;select</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="brewType"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.brewType}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;option value="Espresso"&gt;Espresso&lt;/option&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;option value="Americano"&gt;Americano&lt;/option&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;/select&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>type="text"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="machine"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.machine}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>placeholder="Machine (e.g., De’Longhi Dedica)"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;select</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="rating"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.rating}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>{[1, 2, 3, 4, 5].map(n =&gt; (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;option key={n} value={n}&gt;{n} Star{n &gt; 1 ? 's' : ''}&lt;/option&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>))}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;/select&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;textarea</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="comments"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.comments}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>placeholder="Flavor Comments"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;input</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>type="date"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>name="date"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>value={form.date}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onChange={handleInputChange}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full p-2 mb-4 border rounded"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>/&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;button</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>onClick={handleSubmit}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>Save Brew</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>{/* Brew List */}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>&lt;h2 className="text-xl font-semibold mb-4"&gt;Your Brews&lt;/h2&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>{brews.length === 0 ? (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>&lt;p&gt;No brews yet. Add one above!&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>) : (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>brews.map(brew =&gt; (</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4"&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;h3 className="text-lg font-semibold"&gt;{brew.beanType} - {brew.brewType}&lt;/h3&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Origin:&lt;/strong&gt; {brew.origin}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Roast Date:&lt;/strong&gt; {brew.roastDate}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Grind Size:&lt;/strong&gt; {brew.grindSize}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Machine:&lt;/strong&gt; {brew.machine}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Rating:&lt;/strong&gt; {brew.rating} Star{brew.rating &gt; 1 ? 's' : ''}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Comments:&lt;/strong&gt; {brew.comments}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;p&gt;&lt;strong&gt;Date:&lt;/strong&gt; {brew.date}&lt;/p&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;button</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>onClick={() =&gt; deleteBrew(brew.id)}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                    </span>Delete</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                  </span>&lt;/button&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">              </span>))</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">            </span>)}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>);</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Render the app</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>ReactDOM.render(&lt;App /&gt;, document.getElementById('root'));</span></p>
+<p class="p2"><span class="s1"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>// Service Worker for PWA</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>if ('serviceWorker' in navigator) {</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">      </span>navigator.serviceWorker.register('/sw.js').catch(err =&gt; console.error('Service Worker Error:', err));</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>&lt;/script&gt;</span></p>
+<p class="p1"><span class="s1">&lt;/body&gt;</span></p>
+<p class="p1"><span class="s1">&lt;/html&gt;</span></p>
+</body>
+</html>
