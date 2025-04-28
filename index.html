@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CoffeeBrew Tracker</title>
+  <title>Coffee Brew Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/babel-standalone@7.22.5/babel.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="https://via.placeholder.com/180x180.png?text=CoffeeBrew">
+  <link rel="apple-touch-icon" href="https://via.placeholder.com/180x180.png?text=Coffee Brew">
 </head>
 <body>
   <div id="root" class="min-h-screen bg-gray-100"></div>
@@ -28,7 +28,7 @@
       storageBucket: "coffee-brew-tracker.firebasestorage.app",
       messagingSenderId: "725897927336",
       appId: "1:725897927336:web:de7d287f60487c69a1809d",
-      measuermentId: "G-1RZTPYQEM6"
+      measurementId: "G-1RZTPYQEM6"
     };
 
     // Initialize Firebase
@@ -156,7 +156,7 @@
       return (
         <div className="container mx-auto p-4">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">CoffeeBrew Tracker</h1>
+            <h1 className="text-3xl font-bold">Coffee Brew Tracker</h1>
             <button onClick={signOut} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
               Sign Out
             </button>
