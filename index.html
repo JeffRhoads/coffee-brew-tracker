@@ -4,16 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coffee Brew Tracker</title>
+  <!-- Use Tailwind CSS CDN for now (replace with proper installation later) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <!-- Load production versions of React and ReactDOM -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Load Babel for JSX transpilation -->
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
+  <!-- Load Firebase SDK (UMD, browser-compatible) -->
   <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="https://via.placeholder.com/180x180.png?text=Coffee Brew">
+  <link rel="apple-touch-icon" href="https://via.placeholder.com/180x180.png?text=Coffee+Brew">
 </head>
 <body>
   <div id="root" class="min-h-screen bg-gray-100"></div>
@@ -32,7 +36,7 @@
     };
 
     // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
@@ -41,7 +45,15 @@
       const [user, setUser] = useState(null);
       const [brews, setBrews] = useState([]);
       const [form, setForm] = useState({
-        beanType: '', origin: '', roastDate: '', grindSize: '', brewType: 'Espresso', machine: '', rating: 1, comments: '', date: new Date().toISOString().split('T')[0]
+        beanType: '',
+        origin: '',
+        roastDate: '',
+        grindSize: '',
+        brewType: 'Espresso',
+        machine: '',
+        rating: 1,
+        comments: '',
+        date: new Date().toISOString().split('T')[0]
       });
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
@@ -78,7 +90,15 @@
         try {
           await db.collection('brews').add({ ...form, userId: user.uid });
           setForm({
-            beanType: '', origin: '', roastDate: '', grindSize: '', brewType: 'Espresso', machine: '', rating: 1, comments: '', date: new Date().toISOString().split('T')[0]
+            beanType: '',
+            origin: '',
+            roastDate: '',
+            grindSize: '',
+            brewType: 'Espresso',
+            machine: '',
+            rating: 1,
+            comments: '',
+            date: new Date().toISOString().split('T')[0]
           });
           fetchBrews(user.uid);
         } catch (err) {
@@ -165,7 +185,7 @@
           {/* Add Brew Form */}
           <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
             <h2 className="text-xl font-semibold mb-4">Add New Brew</h2>
-            <div>
+            <form onSubmit={handleSubmit}>
               <input
                 type="text"
                 name="beanType"
@@ -239,12 +259,12 @@
                 className="w-full p-2 mb-4 border rounded"
               />
               <button
-                onClick={handleSubmit}
+                type="submit"
                 className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
               >
                 Save Brew
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Brew List */}
@@ -278,9 +298,10 @@
     }
 
     // Render the app
-    ReactDOM.render(<App />, document.getElementById('root'));
-
-    // Service Worker for PWA
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+  <!-- Service Worker for PWA -->
+  <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Error:', err));
     }
