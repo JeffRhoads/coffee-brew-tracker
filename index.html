@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coffee Brew Tracker</title>
+  <!-- Use Tailwind CSS CDN for now (replace with proper installation later) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load production versions of React and ReactDOM -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Load Babel for JSX transpilation -->
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
+  <!-- Load Firebase SDK (compatibility mode) -->
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="https://via.placeholder.com/180x180.png?text=Coffee+Brew">
+</head>
+<body>
+  <div id="root" class="min-h-screen bg-gray-100"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxOjvLjku6NPFmU20No0kJtk0cr5BgvKI",
+      authDomain: "coffee-brew-tracker.firebaseapp.com",
+      projectId: "coffee-brew-tracker",
+      storageBucket: "coffee-brew-tracker.firebasestorage.app",
+      messagingSenderId: "725897927336",
+      appId: "1:725897927336:web:de7d287f60487c69a1809d",
+      measurementId: "G-1RZTPYQEM6"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Main App Component
+    function App() {
+      const [user, setUser] = useState(null);
+      const [brews, setBrews] = useState([]);
+      const [form, setForm] = useState({
+        beanType: '',
+        origin: '',
+        roastDate: '',
+        grindSize: '',
+        brewType: 'Espresso',
+        machine: '',
+        rating: 1,
+        comments: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [isSignUp, setIsSignUp] = useState(false);
+      const [error, setError] = useState('');
+
+      // Listen for auth state changes
+      useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          setUser(user);
+          if (user) fetchBrews(user.uid);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      // Fetch brews from Firestore
+      const fetchBrews = async (uid) => {
+        const brewsRef = db.collection('brews').where('userId', '==', uid);
+        const snapshot = await brewsRef.get();
+        const brewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBrews(brewsData.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      };
+
+      // Handle form input changes
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
+      };
+
+      // Add or update brew
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) {
+          setError('No authenticated user');
+          return;
+        }
+        const brewData = { ...form, userId: user.uid };
+        console.log('Saving brew:', brewData);
+        try {
+          await db.collection('brews').add(brewData);
+          setForm({
+            beanType: '', origin: '', roastDate: '', grindSize: '', brewType: 'Espresso', machine: '', rating: 1, comments: '', date: new Date().toISOString().split('T')[0]
+          });
+          fetchBrews(user.uid);
+        } catch (err) {
+          console.error('Firestore error:', err);
+          setError('Failed to save brew: ' + err.message);
+        }
+    };
+
+
+      // Delete brew
+      const deleteBrew = async (id) => {
+        await db.collection('brews').doc(id).delete();
+        fetchBrews(user.uid);
+      };
+
+      // Handle authentication
+      const handleAuth = async (e) => {
+        e.preventDefault();
+        try {
+          if (isSignUp) {
+            await auth.createUserWithEmailAndPassword(email, password);
+          } else {
+            await auth.signInWithEmailAndPassword(email, password);
+          }
+          setError('');
+        } catch (err) {
+          setError(err.message);
+        }
+      };
+
+      // Sign out
+      const signOut = () => {
+        auth.signOut();
+        setBrews([]);
+      };
+
+      // Render auth form if not logged in
+      if (!user) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-4">{isSignUp ? 'Sign Up' : 'Log In'}</h2>
+              <form onSubmit={handleAuth}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="w-full p-2 mb-4 border rounded"
+                  required
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full p-2 mb-4 border rounded"
+                  required
+                />
+                <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+                  {isSignUp ? 'Sign Up' : 'Log In'}
+                </button>
+              </form>
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="mt-4 text-blue-500 hover:underline"
+              >
+                {isSignUp ? 'Already have an account? Log In' : 'Need an account? Sign Up'}
+              </button>
+              {error && <p className="text-red-500 mt-4">{error}</p>}
+            </div>
+          </div>
+        );
+      }
+
+      // Render main app
+      return (
+        <div className="container mx-auto p-4">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Coffee Brew Tracker</h1>
+            <button onClick={signOut} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+              Sign Out
+            </button>
+          </div>
+
+          {/* Add Brew Form */}
+          <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 className="text-xl font-semibold mb-4">Add New Brew</h2>
+            <form onSubmit={handleSubmit}>
+              <input
+                type="text"
+                name="beanType"
+                value={form.beanType}
+                onChange={handleInputChange}
+                placeholder="Bean Type (e.g., Illy Arabica)"
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <input
+                type="text"
+                name="origin"
+                value={form.origin}
+                onChange={handleInputChange}
+                placeholder="Origin (e.g., Ethiopia)"
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <input
+                type="date"
+                name="roastDate"
+                value={form.roastDate}
+                onChange={handleInputChange}
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <input
+                type="text"
+                name="grindSize"
+                value={form.grindSize}
+                onChange={handleInputChange}
+                placeholder="Grind Size (e.g., Medium-Fine)"
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <select
+                name="brewType"
+                value={form.brewType}
+                onChange={handleInputChange}
+                className="w-full p-2 mb-4 border rounded"
+              >
+                <option value="Espresso">Espresso</option>
+                <option value="Americano">Americano</option>
+              </select>
+              <input
+                type="text"
+                name="machine"
+                value={form.machine}
+                onChange={handleInputChange}
+                placeholder="Machine (e.g., De’Longhi Dedica)"
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <select
+                name="rating"
+                value={form.rating}
+                onChange={handleInputChange}
+                className="w-full p-2 mb-4 border rounded"
+              >
+                {[1, 2, 3, 4, 5].map(n => (
+                  <option key={n} value={n}>{n} Star{n > 1 ? 's' : ''}</option>
+                ))}
+              </select>
+              <textarea
+                name="comments"
+                value={form.comments}
+                onChange={handleInputChange}
+                placeholder="Flavor Comments"
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleInputChange}
+                className="w-full p-2 mb-4 border rounded"
+              />
+              <button
+                type="submit"
+                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+              >
+                Save Brew
+              </button>
+            </form>
+          </div>
+
+          {/* Brew List */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Your Brews</h2>
+            {brews.length === 0 ? (
+              <p>No brews yet. Add one above!</p>
+            ) : (
+              brews.map(brew => (
+                <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                  <h3 className="text-lg font-semibold">{brew.beanType} - {brew.brewType}</h3>
+                  <p><strong>Origin:</strong> {brew.origin}</p>
+                  <p><strong>Roast Date:</strong> {brew.roastDate}</p>
+                  <p><strong>Grind Size:</strong> {brew.grindSize}</p>
+                  <p><strong>Machine:</strong> {brew.machine}</p>
+                  <p><strong>Rating:</strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</p>
+                  <p><strong>Comments:</strong> {brew.comments}</p>
+                  <p><strong>Date:</strong> {brew.date}</p>
+                  <button
+                    onClick={() => deleteBrew(brew.id)}
+                    className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Render the app
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+  <!-- Service Worker for PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Error:', err));
+    }
+  </script>
+</body>
+</html>
