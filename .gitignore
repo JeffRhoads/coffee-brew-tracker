@@ -68,3 +68,9 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 coffee-brew-tracker-firebase-adminsdk-fbsvc-4a1efdb6cb.json
+coffee-brew-tracker-firebase-adminsdk-fbsvc-4a1efdb6cb.json
+deploy.yaml
+.DS_Store
+.firebaserc
+Errors.txt
+coffee-brew-tracker/
