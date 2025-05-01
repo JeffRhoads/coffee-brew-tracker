@@ -1,0 +1,30 @@
+```yaml
+    name: Deploy to Firebase Hosting
+
+    on:
+      push:
+        branches:
+          - main
+
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout Repository
+            uses: actions/checkout@v4
+
+          - name: Verify Files
+            run: |
+              ls -la
+              test -f index.html || echo "Error: index.html not found" && exit 1
+              test -f sw.js || echo "Error: sw.js not found" && exit 1
+              test -f firebase.json || echo "Error: firebase.json not found" && exit 1
+
+          - name: Deploy to Firebase
+            uses: FirebaseExtended/action-hosting-deploy@v0
+            with:
+              repoToken: '${{ secrets.GITHUB_TOKEN }}'
+              firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}'
+              projectId: 'coffee-brew-tracker' # Replace with your actual Firebase project ID
+              channelId: 'live'
+    ```
