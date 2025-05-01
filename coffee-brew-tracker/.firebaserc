@@ -1,8 +1,0 @@
-{
-  "projects": {
-    "staging": "coffee-brew-tracker",
-    "default": "coffee-brew-tracker"
-  },
-  "targets": {},
-  "etags": {}
-}
