@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#3c2f2f">
   <title>Coffee Brew Tracker</title>
-  <!-- Use Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load compiled Tailwind CSS -->
+  <link href="/output.css" rel="stylesheet">
   <!-- Load React and ReactDOM -->
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
@@ -40,7 +40,6 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    db.enableLogging(true); // Enable Firestore debug logging
 
     // Main App Component
     function App() {
@@ -69,6 +68,7 @@
       // Listen for auth state changes
       useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
+          console.log('Auth state changed:', user ? user.uid : 'No user');
           setUser(user);
           if (user) {
             fetchBeans(user.uid).catch(err => console.error('Fetch beans error:', err));
@@ -81,6 +81,7 @@
       // Fetch beans from Firestore
       const fetchBeans = async (uid) => {
         try {
+          console.log('Fetching beans for user:', uid);
           const beansRef = db.collection('beans').where('userId', '==', uid);
           const snapshot = await beansRef.get();
           const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -94,6 +95,7 @@
       // Fetch brews from Firestore
       const fetchBrews = async (uid) => {
         try {
+          console.log('Fetching brews for user:', uid);
           const brewsRef = db.collection('brews').where('userId', '==', uid);
           const snapshot = await brewsRef.get();
           const brewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -187,6 +189,7 @@
       // Delete brew
       const deleteBrew = async (id) => {
         try {
+          console.log('Deleting brew:', id);
           await db.collection('brews').doc(id).delete();
           await fetchBrews(user.uid);
         } catch (err) {
@@ -199,6 +202,7 @@
       const handleAuth = async (e) => {
         e.preventDefault();
         try {
+          console.log('Attempting auth:', isSignUp ? 'Sign Up' : 'Log In', email);
           if (isSignUp) {
             await auth.createUserWithEmailAndPassword(email, password);
           } else {
@@ -213,6 +217,7 @@
 
       // Sign out
       const signOut = () => {
+        console.log('Signing out');
         auth.signOut();
         setBrews([]);
         setBeans([]);
