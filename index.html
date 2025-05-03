@@ -40,6 +40,7 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+    db.enableLogging(true); // Enable Firestore debug logging
 
     // Main App Component
     function App() {
@@ -70,8 +71,8 @@
         const unsubscribe = auth.onAuthStateChanged((user) => {
           setUser(user);
           if (user) {
-            fetchBeans(user.uid);
-            fetchBrews(user.uid);
+            fetchBeans(user.uid).catch(err => console.error('Fetch beans error:', err));
+            fetchBrews(user.uid).catch(err => console.error('Fetch brews error:', err));
           }
         });
         return () => unsubscribe();
@@ -79,18 +80,28 @@
 
       // Fetch beans from Firestore
       const fetchBeans = async (uid) => {
-        const beansRef = db.collection('beans').where('userId', '==', uid);
-        const snapshot = await beansRef.get();
-        const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBeans(beansData);
+        try {
+          const beansRef = db.collection('beans').where('userId', '==', uid);
+          const snapshot = await beansRef.get();
+          const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setBeans(beansData);
+        } catch (err) {
+          console.error('Error fetching beans:', err);
+          throw err;
+        }
       };
 
       // Fetch brews from Firestore
       const fetchBrews = async (uid) => {
-        const brewsRef = db.collection('brews').where('userId', '==', uid);
-        const snapshot = await brewsRef.get();
-        const brewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBrews(brewsData.sort((a, b) => new Date(b.brewDate) - new Date(a.brewDate)));
+        try {
+          const brewsRef = db.collection('brews').where('userId', '==', uid);
+          const snapshot = await brewsRef.get();
+          const brewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setBrews(brewsData.sort((a, b) => new Date(b.brewDate) - new Date(a.brewDate)));
+        } catch (err) {
+          console.error('Error fetching brews:', err);
+          throw err;
+        }
       };
 
       // Handle brew form input changes
@@ -112,13 +123,24 @@
           setError('No authenticated user');
           return;
         }
-        const beanData = { ...beanForm, userId: user.uid };
+        if (!beanForm.beanType || !beanForm.roastDate) {
+          setError('Bean Type and Roast Date are required');
+          return;
+        }
+        const beanData = { 
+          beanType: beanForm.beanType.trim(),
+          origin: beanForm.origin ? beanForm.origin.trim() : '',
+          roastDate: beanForm.roastDate,
+          userId: user.uid 
+        };
+        console.log('Saving bean:', beanData);
         try {
           await db.collection('beans').add(beanData);
           setBeanForm({ beanType: '', origin: '', roastDate: '' });
-          fetchBeans(user.uid);
+          await fetchBeans(user.uid);
           setError('');
         } catch (err) {
+          console.error('Bean save error:', err);
           setError('Failed to save bean: ' + err.message);
         }
       };
@@ -142,6 +164,7 @@
           origin: selectedBean.origin,
           roastDate: selectedBean.roastDate
         };
+        console.log('Saving brew:', brewData);
         try {
           await db.collection('brews').add(brewData);
           setBrewForm({
@@ -153,17 +176,23 @@
             comments: '',
             brewDate: new Date().toISOString().split('T')[0]
           });
-          fetchBrews(user.uid);
+          await fetchBrews(user.uid);
           setError('');
         } catch (err) {
+          console.error('Brew save error:', err);
           setError('Failed to save brew: ' + err.message);
         }
       };
 
       // Delete brew
       const deleteBrew = async (id) => {
-        await db.collection('brews').doc(id).delete();
-        fetchBrews(user.uid);
+        try {
+          await db.collection('brews').doc(id).delete();
+          await fetchBrews(user.uid);
+        } catch (err) {
+          console.error('Delete brew error:', err);
+          setError('Failed to delete brew: ' + err.message);
+        }
       };
 
       // Handle authentication
@@ -177,6 +206,7 @@
           }
           setError('');
         } catch (err) {
+          console.error('Auth error:', err);
           setError(err.message);
         }
       };
@@ -285,6 +315,7 @@
                 Save Bean
               </button>
             </form>
+            {error && <p className="text-red-500 mt-4">{error}</p>}
           </div>
 
           {/* Add Brew Form */}
