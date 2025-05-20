@@ -1,4 +1,43 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,21 +47,17 @@
   <meta name="theme-color" content="#3c2f2f">
   <title>Coffee Brew Tracker</title>
   <link rel="manifest" href="/manifest.json">
-  <!-- Load compiled Tailwind CSS -->
   <link href="/output.css" rel="stylesheet">
-  <!-- Load React and ReactDOM -->
   <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-  <!-- Load Babel for JSX -->
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
-  <!-- Load Firebase SDK (compatibility mode) -->
   <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
-  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
 </head>
 <body>
-  <div id="root" class="min-h-screen bg-gray-100"></div>
+  <div id="root" class="min-h-screen bg-gray-100 overflow-y-auto"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
 
@@ -53,12 +88,15 @@
         brewType: 'Espresso',
         machine: '',
         rating: 1,
-        comments: '',
+        tasteNotes: '',
         brewDate: new Date().toISOString().split('T')[0]
       });
       const [beanForm, setBeanForm] = useState({
-        beanType: '',
+        brand: '',
+        beanName: '',
         origin: '',
+        species: '',
+        roast: '',
         roastDate: ''
       });
       const [email, setEmail] = useState('');
@@ -74,6 +112,9 @@
           if (user) {
             fetchBeans(user.uid).catch(err => console.error('Fetch beans error:', err));
             fetchBrews(user.uid).catch(err => console.error('Fetch brews error:', err));
+          } else {
+            setBrews([]);
+            setBeans([]);
           }
         });
         return () => unsubscribe();
@@ -107,6 +148,11 @@
         }
       };
 
+      // Get bean details by ID
+      const getBeanDetails = (beanId) => {
+        return beans.find(bean => bean.id === beanId) || {};
+      };
+
       // Handle brew form input changes
       const handleBrewInputChange = (e) => {
         const { name, value } = e.target;
@@ -126,20 +172,23 @@
           setError('No authenticated user');
           return;
         }
-        if (!beanForm.beanType || !beanForm.roastDate) {
-          setError('Bean Type and Roast Date are required');
+        if (!beanForm.brand || !beanForm.beanName || !beanForm.origin || !beanForm.species || !beanForm.roast || !beanForm.roastDate) {
+          setError('All bean fields are required');
           return;
         }
-        const beanData = { 
-          beanType: beanForm.beanType.trim(),
-          origin: beanForm.origin ? beanForm.origin.trim() : '',
+        const beanData = {
+          brand: beanForm.brand.trim(),
+          beanName: beanForm.beanName.trim(),
+          origin: beanForm.origin.trim(),
+          species: beanForm.species,
+          roast: beanForm.roast,
           roastDate: beanForm.roastDate,
-          userId: user.uid 
+          userId: user.uid
         };
         console.log('Saving bean:', beanData);
         try {
           await db.collection('beans').add(beanData);
-          setBeanForm({ beanType: '', origin: '', roastDate: '' });
+          setBeanForm({ brand: '', beanName: '', origin: '', species: '', roast: '', roastDate: '' });
           await fetchBeans(user.uid);
           setError('');
         } catch (err) {
@@ -155,17 +204,19 @@
           setError('No authenticated user');
           return;
         }
-        const selectedBean = beans.find(bean => bean.id === brewForm.beanId);
-        if (!selectedBean) {
+        if (!brewForm.beanId) {
           setError('Please select a bean');
           return;
         }
         const brewData = {
-          ...brewForm,
-          userId: user.uid,
-          beanType: selectedBean.beanType,
-          origin: selectedBean.origin,
-          roastDate: selectedBean.roastDate
+          beanId: brewForm.beanId,
+          grindSize: brewForm.grindSize.trim(),
+          brewType: brewForm.brewType,
+          machine: brewForm.machine.trim(),
+          rating: parseInt(brewForm.rating),
+          tasteNotes: brewForm.tasteNotes.trim(),
+          brewDate: brewForm.brewDate,
+          userId: user.uid
         };
         console.log('Saving brew:', brewData);
         try {
@@ -176,7 +227,7 @@
             brewType: 'Espresso',
             machine: '',
             rating: 1,
-            comments: '',
+            tasteNotes: '',
             brewDate: new Date().toISOString().split('T')[0]
           });
           await fetchBrews(user.uid);
@@ -220,8 +271,6 @@
       const signOut = () => {
         console.log('Signing out');
         auth.signOut();
-        setBrews([]);
-        setBeans([]);
       };
 
       // Render auth form if not logged in
@@ -278,14 +327,27 @@
             <h2 className="text-xl font-semibold mb-4">Add Coffee Bean</h2>
             <form onSubmit={handleBeanSubmit}>
               <div className="mb-4">
-                <label htmlFor="beanType" className="block text-sm font-medium text-gray-700">Bean Type</label>
+                <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
                 <input
                   type="text"
-                  name="beanType"
-                  id="beanType"
-                  value={beanForm.beanType}
+                  name="brand"
+                  id="brand"
+                  value={beanForm.brand}
                   onChange={handleBeanInputChange}
-                  placeholder="e.g., Illy Arabica"
+                  placeholder="e.g., Illy"
+                  className="w symbolism-full p-2 border rounded"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="beanName" className="block text-sm font-medium text-gray-700">Bean Name</label>
+                <input
+                  type="text"
+                  name="beanName"
+                  id="beanName"
+                  value={beanForm.beanName}
+                  onChange={handleBeanInputChange}
+                  placeholder="e.g., Kawa"
                   className="w-full p-2 border rounded"
                   required
                 />
@@ -300,7 +362,41 @@
                   onChange={handleBeanInputChange}
                   placeholder="e.g., Ethiopia"
                   className="w-full p-2 border rounded"
+                  required
                 />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="species" className="block text-sm font-medium text-gray-700">Species</label>
+                <select
+                  name="species"
+                  id="species"
+                  value={beanForm.species}
+                  onChange={handleBeanInputChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="">Select Species</option>
+                  <option value="Arabica">Arabica</option>
+                  <option value="Robusta">Robusta</option>
+                  <option value="Excelsa">Excelsa</option>
+                  <option value="Liberica">Liberica</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="roast" className="block text-sm font-medium text-gray-700">Roast</label>
+                <select
+                  name="roast"
+                  id="roast"
+                  value={beanForm.roast}
+                  onChange={handleBeanInputChange}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="">Select Roast</option>
+                  <option value="Light">Light</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Dark">Dark</option>
+                </select>
               </div>
               <div className="mb-4">
                 <label htmlFor="roastDate" className="block text-sm font-medium text-gray-700">Roast Date</label>
@@ -341,22 +437,27 @@
                   <option value="">-- Select a Bean --</option>
                   {beans.map(bean => (
                     <option key={bean.id} value={bean.id}>
-                      {bean.beanType} ({bean.origin}, Roasted: {bean.roastDate})
+                      {bean.brand} {bean.beanName} {bean.species} {bean.roast} ({bean.origin}, Roasted: {bean.roastDate})
                     </option>
                   ))}
                 </select>
               </div>
               <div className="mb-4">
                 <label htmlFor="grindSize" className="block text-sm font-medium text-gray-700">Grind Size</label>
-                <input
-                  type="text"
+                <select
                   name="grindSize"
                   id="grindSize"
                   value={brewForm.grindSize}
                   onChange={handleBrewInputChange}
-                  placeholder="e.g., Medium-Fine"
                   className="w-full p-2 border rounded"
-                />
+                >
+                  <option value="">Select Grind Size</option>
+                  <option value="Fine">Fine</option>
+                  <option value="Medium-Fine">Medium-Fine</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Medium-Coarse">Medium-Coarse</option>
+                  <option value="Coarse">Coarse</option>
+                </select>
               </div>
               <div className="mb-4">
                 <label htmlFor="brewType" className="block text-sm font-medium text-gray-700">Brew Type</label>
@@ -369,6 +470,9 @@
                 >
                   <option value="Espresso">Espresso</option>
                   <option value="Americano">Americano</option>
+                  <option value="Cappuccino">Cappuccino</option>
+                  <option value="Pour Over">Pour Over</option>
+                  <option value="French Press">French Press</option>
                 </select>
               </div>
               <div className="mb-4">
@@ -384,7 +488,7 @@
                 />
               </div>
               <div className="mb-4">
-                <label htmlFor="rating" className="block text-sm font-medium text-gray-700">Rating</label>
+                <label htmlFor="rating" className="block text-sm font-medium text-gray-700">Rating (1-5)</label>
                 <select
                   name="rating"
                   id="rating"
@@ -398,13 +502,13 @@
                 </select>
               </div>
               <div className="mb-4">
-                <label htmlFor="comments" className="block text-sm font-medium text-gray-700">Flavor Comments</label>
+                <label htmlFor="tasteNotes" className="block text-sm font-medium text-gray-700">Taste Notes</label>
                 <textarea
-                  name="comments"
-                  id="comments"
-                  value={brewForm.comments}
+                  name="tasteNotes"
+                  id="tasteNotes"
+                  value={brewForm.tasteNotes}
                   onChange={handleBrewInputChange}
-                  placeholder="Flavor Comments"
+                  placeholder="e.g., Nutty, bright acidity"
                   className="w-full p-2 border rounded"
                 />
               </div>
@@ -436,24 +540,31 @@
             {brews.length === 0 ? (
               <p>No brews yet. Add one above!</p>
             ) : (
-              brews.map(brew => (
-                <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
-                  <h3 className="text-lg font-semibold">{brew.beanType} - {brew.brewType}</h3>
-                  <p><strong>Origin:</strong> {brew.origin}</p>
-                  <p><strong>Roast Date:</strong> {brew.roastDate}</p>
-                  <p><strong>Grind Size:</strong> {brew.grindSize}</p>
-                  <p><strong>Machine:</strong> {brew.machine}</p>
-                  <p><strong>Rating:</strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</p>
-                  <p><strong>Comments:</strong> {brew.comments}</p>
-                  <p><strong>Brew Date:</strong> {brew.brewDate}</p>
-                  <button
-                    onClick={() => deleteBrew(brew.id)}
-                    className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))
+              brews.map(brew => {
+                const bean = getBeanDetails(brew.beanId);
+                return (
+                  <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                    <h3 className="text-lg font-semibold">
+                      {bean.brand || 'Unknown'} {bean.beanName || 'Bean'} - {brew.brewType}
+                    </h3>
+                    <p><strong>Origin:</strong> {bean.origin || 'N/A'}</p>
+                    <p><strong>Species:</strong> {bean.species || 'N/A'}</p>
+                    <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
+                    <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
+                    <p><strong>Grind Size:</strong> {brew.grindSize || 'N/A'}</p>
+                    <p><strong>Machine:</strong> {brew.machine || 'N/A'}</p>
+                    <p><strong>Rating:</strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</p>
+                    <p><strong>Taste Notes:</strong> {brew.tasteNotes || 'N/A'}</p>
+                    <p><strong>Brew Date:</strong> {brew.brewDate}</p>
+                    <button
+                      onClick={() => deleteBrew(brew.id)}
+                      className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -463,7 +574,6 @@
     // Render the app
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
-  <!-- Service Worker for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Error:', err));
