@@ -604,21 +604,20 @@
                   <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
                     <div className="mb-2">
                       <h3 className="text-lg font-semibold">
-                        Bean: {bean.brand || 'Unknown'} - {bean.beanName || 'Bean'}
+                        {bean.brand || 'Unknown'} : {bean.beanName || 'Bean'}
                       </h3>
-                      <p><strong>Origin:</strong> {bean.origin || 'N/A'} - <strong>Species:</strong> {bean.species || 'N/A'}</p>
-                      <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
-                      <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
+                      <p>Origin: {bean.origin || 'N/A'}   Species:<strong> {bean.species || 'N/A'} </strong></p>
+                      <p>Roast: {bean.roast || 'N/A'}   Roast Date: {bean.roastDate || 'N/A'}</p>
                     </div>
                     <hr className="border-t border-gray-300 my-2" />
                     <div>
                       <h3 className="text-lg font-semibold">
-                        Brew: {brew.brewType}
+                        {brew.brewType}
                       </h3>
-                      <p><strong>Grind Size:</strong> {brew.grindSize || 'N/A'} - <strong>Machine:</strong> {brew.machine || 'N/A'}</p>
-                      <p><strong>Rating:</strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</p>
-                      <p><strong>Taste Notes:</strong> {brew.tasteNotes || 'N/A'}</p>
-                      <p><strong>Brew Date:</strong> {brew.brewDate}</p>
+                      <p>Grind Size: {brew.grindSize || 'N/A'}   Machine: {brew.machine || 'N/A'}</p>
+                      <p>Rating:<strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</strong></p>
+                      <p>Taste Notes:<strong> {brew.tasteNotes || 'N/A'}</strong></p>
+                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
                     </div>
                     <button
                       onClick={() => deleteBrew(brew.id)}
