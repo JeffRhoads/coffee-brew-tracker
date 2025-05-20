@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom styles for Safari compatibility */
+@supports (-webkit-touch-callout: none) {
+  .container {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  input,
+  select,
+  textarea {
+    -webkit-appearance: none;
+    appearance: none;
+    @apply border border-gray-300 rounded;
+  }
+  select {
+    background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==') no-repeat right 0.5rem center/1rem 1rem;
+  }
+  button:active {
+    @apply bg-blue-600; /* For buttons with bg-blue-500 */
+  }
+  .bg-red-500:active {
+    @apply bg-red-600;
+  }
+  .bg-gray-500:active {
+    @apply bg-gray-600;
+  }
+  .text-blue-500:active {
+    @apply text-blue-600;
+  }
+}
+
+/* Improve shadow rendering for Safari */
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure consistent font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
