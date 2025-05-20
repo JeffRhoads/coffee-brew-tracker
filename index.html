@@ -58,6 +58,41 @@
 </head>
 <body>
   <div id="root" class="min-h-screen bg-gray-100 overflow-y-auto"></div>
+  <!-- Commented out XLSX script; re-enable if needed for import feature -->
+  <!--
+  <script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+      if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+          var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+          var firstSheetName = workbook.SheetNames[0];
+          var worksheet = workbook.Sheets[firstSheetName];
+          var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+          var filteredData = jsonData.filter(row => row.some(filledCell));
+          var headerRowIndex = filteredData.findIndex((row, index) =>
+            row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+          );
+          if (headerRowIndex === -1 || headerRowIndex > 25) {
+            headerRowIndex = 0;
+          }
+          var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+          csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+          return csv;
+        } catch (e) {
+          console.error(e);
+          return "";
+        }
+      }
+      return gk_fileData[filename] || "";
+    }
+  </script>
+  -->
   <script type="text/babel">
     const { useState, useEffect } = React;
 
@@ -130,7 +165,7 @@
           setBeans(beansData);
         } catch (err) {
           console.error('Error fetching beans:', err);
-          throw err;
+          setError('Failed to fetch beans: ' + err.message);
         }
       };
 
@@ -144,7 +179,7 @@
           setBrews(brewsData.sort((a, b) => new Date(b.brewDate) - new Date(a.brewDate)));
         } catch (err) {
           console.error('Error fetching brews:', err);
-          throw err;
+          setError('Failed to fetch brews: ' + err.message);
         }
       };
 
@@ -347,7 +382,7 @@
                   value={beanForm.brand}
                   onChange={handleBeanInputChange}
                   placeholder="e.g., Illy"
-                  className="w symbolism-full p-2 border rounded"
+                  className="w-full p-2 border rounded"
                   required
                 />
               </div>
@@ -430,6 +465,32 @@
               </button>
             </form>
             {error && <p className="text-red-500 mt-4">{error}</p>}
+          </div>
+
+          {/* Bean List */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Your Beans</h2>
+            {beans.length === 0 ? (
+              <p>No beans yet. Add one above!</p>
+            ) : (
+              beans.map(bean => (
+                <div key={bean.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                  <h3 className="text-lg font-semibold">
+                    {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
+                  </h3>
+                  <p><strong>Origin:</strong> {bean.origin || 'N/A'}</p>
+                  <p><strong>Species:</strong> {bean.species || 'N/A'}</p>
+                  <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
+                  <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
+                  <button
+                    onClick={() => deleteBean(bean.id)}
+                    className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Add Brew Form */}
@@ -545,33 +606,6 @@
             </form>
             {error && <p className="text-red-500 mt-4">{error}</p>}
           </div>
-          {/* Bean List */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Your Beans</h2>
-            {beans.length === 0 ? (
-              <p>No beans yet. Add one above!</p>
-            ) : (
-              beans.map(bean => {
-                return (
-                  <div key={bean.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
-                    <h3 className="text-lg font-semibold">
-                      {bean.brand || 'Unknown'} - {bean.beanName || 'Bean'}
-                    </h3>
-                    <p><strong>Origin:</strong> {bean.origin || 'N/A'}</p>
-                    <p><strong>Species:</strong> {bean.species || 'N/A'}</p>
-                    <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
-                    <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
-                    <button
-                      onClick={() => deleteBean(bean.id)}
-                      className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
 
           {/* Brew List */}
           <div>
@@ -584,8 +618,10 @@
                 return (
                   <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
                     <h3 className="text-lg font-semibold">
-                      {bean.brand || 'Unknown'} - {bean.beanName || 'Bean'} - {brew.brewType}
+                      {bean.brand || 'Unknown'} {bean.beanName || 'Bean'} - {brew.brewType}
                     </h3>
+                    <p><strong>Origin:</strong> {bean.origin || 'N/A'}</p>
+                    <p><strong>Species:</strong> {bean.species || 'N/A'}</p>
                     <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
                     <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
                     <p><strong>Grind Size:</strong> {brew.grindSize || 'N/A'}</p>
