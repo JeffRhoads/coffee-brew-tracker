@@ -606,18 +606,27 @@
                       <h3 className="text-lg font-semibold">
                         {bean.brand || 'Unknown'} : {bean.beanName || 'Bean'}
                       </h3>
-                      <p>Origin: {bean.origin || 'N/A'}   Species:<strong> {bean.species || 'N/A'} </strong></p>
-                      <p>Roast: {bean.roast || 'N/A'}   Roast Date: {bean.roastDate || 'N/A'}</p>
+                      <p className="flex justify-between">
+                        <span>Origin: {bean.origin || 'N/A'}</span>
+                        <span>Species:<strong> {bean.species || 'N/A'}</strong></span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span>Roast: {bean.roast || 'N/A'}</span>
+                        <span>Roast Date: {bean.roastDate || 'N/A'}</span>
+                      </p>
                     </div>
                     <hr className="border-t border-gray-300 my-2" />
                     <div>
                       <h3 className="text-lg font-semibold">
                         {brew.brewType}
                       </h3>
-                      <p>Grind Size: {brew.grindSize || 'N/A'}   Machine: {brew.machine || 'N/A'}</p>
+                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
+                      <p className="flex justify-between">
+                        <span>Grind Size: {brew.grindSize || 'N/A'}</span>
+                        <span>Machine: {brew.machine || 'N/A'}</span>
+                      </p>
                       <p>Rating:<strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</strong></p>
                       <p>Taste Notes:<strong> {brew.tasteNotes || 'N/A'}</strong></p>
-                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
                     </div>
                     <button
                       onClick={() => deleteBrew(brew.id)}
