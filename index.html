@@ -602,6 +602,19 @@
                 const bean = getBeanDetails(brew.beanId);
                 return (
                   <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {brew.brewType}
+                      </h3>
+                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
+                      <p className="flex justify-between">
+                        <span>Grind Size: {brew.grindSize || 'N/A'}</span>
+                        <span>Machine: {brew.machine || 'N/A'}</span>
+                      </p>
+                      <p>Rating:<strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</strong></p>
+                      <p>Taste Notes:<strong> {brew.tasteNotes || 'N/A'}</strong></p>
+                    </div>
+                    <hr className="border-t border-gray-300 my-2" />
                     <div className="mb-2">
                       <h3 className="text-lg font-semibold">
                         {bean.brand || 'Unknown'} : {bean.beanName || 'Bean'}
@@ -614,19 +627,6 @@
                         <span>Origin: {bean.origin || 'N/A'}</span>
                         <span>Roast Date: {bean.roastDate || 'N/A'}</span>
                       </p>
-                    </div>
-                    <hr className="border-t border-gray-300 my-2" />
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        {brew.brewType}
-                      </h3>
-                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
-                      <p className="flex justify-between">
-                        <span>Grind Size: {brew.grindSize || 'N/A'}</span>
-                        <span>Machine: {brew.machine || 'N/A'}</span>
-                      </p>
-                      <p>Rating:<strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</strong></p>
-                      <p>Taste Notes:<strong> {brew.tasteNotes || 'N/A'}</strong></p>
                     </div>
                     <button
                       onClick={() => deleteBrew(brew.id)}
