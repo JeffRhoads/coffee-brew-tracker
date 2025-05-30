@@ -122,6 +122,14 @@
       const [familyId, setFamilyId] = useState(null);
       const [pendingInvitations, setPendingInvitations] = useState([]);
       const [invitationEmail, setInvitationEmail] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [isSignUp, setIsSignUp] = useState(false);
+      const [error, setError] = useState('');
+      const [isStandalone, setIsStandalone] = useState(false);
+      const [needsNickname, setNeedsNickname] = useState(false);
+      const [isLoading, setIsLoading] = useState(true);
+
       const [brewForm, setBrewForm] = useState({
         beanId: '',
         grindSize: '',
@@ -131,6 +139,7 @@
         tasteNotes: '',
         brewDate: new Date().toISOString().split('T')[0]
       });
+
       const [beanForm, setBeanForm] = useState({
         brand: '',
         beanName: '',
@@ -139,12 +148,6 @@
         roast: '',
         roastDate: ''
       });
-      const [email, setEmail] = useState('');
-      const [password, setPassword] = useState('');
-      const [isSignUp, setIsSignUp] = useState(false);
-      const [error, setError] = useState('');
-      const [isStandalone, setIsStandalone] = useState(false);
-      const [needsNickname, setNeedsNickname] = useState(false);
 
       // Check if running in standalone mode
       useEffect(() => {
@@ -155,32 +158,39 @@
 
       // Listen for auth state changes and fetch user profile
       useEffect(() => {
+        setIsLoading(true);
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
           console.log('Auth state changed:', user ? user.uid : 'No user');
           setUser(user);
           if (user) {
-            // Fetch user profile
-            const userDoc = await db.collection('users').doc(user.uid).get();
-            if (userDoc.exists) {
-              const userData = userDoc.data();
-              setNickname(userData.nickname || '');
-              setFamilyId(userData.familyId || null);
-              setNeedsNickname(!userData.nickname);
-              // Fetch data
-              fetchPersonalBeans(user.uid);
-              fetchBrews(user.uid);
-              if (userData.familyId) {
-                fetchSharedBeans(userData.familyId);
-                fetchPendingInvitations(user.email);
+            try {
+              // Fetch user profile
+              const userDocRef = db.collection('users').doc(user.uid);
+              const userDoc = await userDocRef.get();
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                setNickname(userData.nickname || '');
+                setFamilyId(userData.familyId || null);
+                setNeedsNickname(!userData.nickname);
+                // Fetch data
+                await fetchPersonalBeans(user.uid);
+                await fetchBrews(user.uid);
+                if (userData.familyId) {
+                  await fetchSharedBeans(userData.familyId);
+                  await fetchPendingInvitations(user.email);
+                }
+              } else {
+                // Create user profile with email
+                await userDocRef.set({
+                  email: user.email,
+                  nickname: '',
+                  familyId: null
+                });
+                setNeedsNickname(true);
               }
-            } else {
-              // Create user profile with email
-              await db.collection('users').doc(user.uid).set({
-                email: user.email,
-                nickname: '',
-                familyId: null
-              });
-              setNeedsNickname(true);
+            } catch (err) {
+              console.error('Error initializing user:', err);
+              setError('Failed to initialize user: ' + err.message);
             }
           } else {
             setBrews([]);
@@ -191,6 +201,7 @@
             setNickname('');
             setNeedsNickname(false);
           }
+          setIsLoading(false);
         });
         return () => unsubscribe();
       }, []);
@@ -265,11 +276,11 @@
           setNeedsNickname(false);
           setError('');
           // Refresh user data
-          fetchPersonalBeans(user.uid);
-          fetchBrews(user.uid);
+          await fetchPersonalBeans(user.uid);
+          await fetchBrews(user.uid);
           if (familyId) {
-            fetchSharedBeans(familyId);
-            fetchPendingInvitations(user.email);
+            await fetchSharedBeans(familyId);
+            await fetchPendingInvitations(user.email);
           }
         } catch (err) {
           console.error('Error setting nickname:', err);
@@ -329,7 +340,7 @@
           });
           setInvitationEmail('');
           setError('');
-          fetchPendingInvitations(user.email);
+          await fetchPendingInvitations(user.email);
         } catch (err) {
           console.error('Error sending invitation:', err);
           setError('Failed to send invitation: ' + err.message);
@@ -348,8 +359,8 @@
             members: firebase.firestore.FieldValue.arrayUnion(user.uid)
           });
           setFamilyId(familyId);
-          fetchSharedBeans(familyId);
-          fetchPendingInvitations(user.email);
+          await fetchSharedBeans(familyId);
+          await fetchPendingInvitations(user.email);
           setError('');
         } catch (err) {
           console.error('Error accepting invitation:', err);
@@ -362,6 +373,18 @@
         const personalBean = personalBeans.find(bean => bean.id === beanId);
         if (personalBean) return personalBean;
         return sharedBeans.find(bean => bean.id === beanId) || {};
+      };
+
+      // Handle brew form input changes
+      const handleBrewInputChange = (e) => {
+        const { name, value } = e.target;
+        setBrewForm({ ...brewForm, [name]: value });
+      };
+
+      // Handle bean form input changes
+      const handleBeanInputChange = (e) => {
+        const { name, value } = e.target;
+        setBeanForm({ ...beanForm, [name]: value });
       };
 
       // Add a new bean (personal or shared)
@@ -502,6 +525,15 @@
       const handleRefresh = () => {
         window.location.reload();
       };
+
+      // Render loading state
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <p>Loading...</p>
+          </div>
+        );
+      }
 
       // Render nickname form if needed
       if (needsNickname) {
