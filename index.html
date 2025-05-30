@@ -84,8 +84,8 @@
           var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
           csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
           return csv;
-        } catch (err) {
-          console.error(err);
+        } catch (e) {
+          console.error(e);
           return "";
         }
       }
@@ -139,7 +139,8 @@
       storageBucket: "coffee-brew-tracker.firebasestorage.app",
       messagingSenderId: "725897927336",
       appId: "1:725897927336:web:de7d287f60487c69a1809d",
-      measurementId: "G-1RZTPYQEM6"
+      measurementId: "G-1RZTPYQEM6",
+      databaseId: "(default)" // Explicitly specify the database
     };
 
     // Initialize Firebase
@@ -283,14 +284,14 @@
         }
       };
 
-      // Fetch pending invitations
+      // Fetch pending invitations (avoid real-time listeners)
       const fetchPendingInvitations = async (email) => {
         try {
           console.log('Fetching pending invitations for:', email);
           const invitationsRef = db.collection('invitations')
             .where('invitedEmail', '==', email)
             .where('status', '==', 'pending');
-          const snapshot = await invitationsRef.get();
+          const snapshot = await invitationsRef.get(); // One-time fetch
           const invitationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setPendingInvitations(invitationsData);
         } catch (err) {
@@ -349,6 +350,16 @@
         }
         console.log('User state before sending invitation:', user);
         console.log('Firebase Auth Current User:', firebase.auth().currentUser);
+        // Force token refresh
+        try {
+          console.log('Forcing token refresh before write operation');
+          await user.getIdToken(true);
+          console.log('Token refreshed successfully');
+        } catch (tokenErr) {
+          console.error('Error refreshing token:', tokenErr);
+          setError('Failed to refresh authentication token: ' + tokenErr.message);
+          return;
+        }
         console.log('Attempting to write invitation with data:', {
           familyId: familyId,
           invitedEmail: invitationEmail.trim(),
@@ -392,16 +403,24 @@
             await db.collection('invitations').add(invitationData);
           } catch (err) {
             console.error('Initial write to invitations failed:', err);
+            console.error('Error details:', JSON.stringify(err, null, 2));
             // Fallback: Create the invitations collection with a test document
             console.log('Attempting to create invitations collection with a test document');
-            await db.collection('invitations').doc('test-init').set({
-              familyId: 'test-family',
-              invitedEmail: 'test@example.com',
-              invitedByUid: user.uid,
-              invitedByNickname: nickname,
-              status: 'test',
-              createdAt: new Date().toISOString()
-            });
+            try {
+              await db.collection('invitations').doc('test-init').set({
+                familyId: 'test-family',
+                invitedEmail: 'test@example.com',
+                invitedByUid: user.uid,
+                invitedByNickname: nickname,
+                status: 'test',
+                createdAt: new Date().toISOString()
+              });
+              console.log('Test document created successfully');
+            } catch (fallbackErr) {
+              console.error('Fallback write failed:', fallbackErr);
+              console.error('Fallback error details:', JSON.stringify(fallbackErr, null, 2));
+              throw fallbackErr; // Re-throw to handle in outer catch block
+            }
             console.log('Test document created, retrying invitation write');
             await db.collection('invitations').add(invitationData);
           }
