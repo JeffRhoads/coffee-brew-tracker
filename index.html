@@ -94,7 +94,36 @@
   </script>
   -->
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, Component } = React;
+
+    // Error Boundary Component
+    class ErrorBoundary extends Component {
+      state = { hasError: false, error: null };
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-2xl font-bold mb-4">Something Went Wrong</h2>
+                <p className="text-red-500 mb-4">{this.state.error?.message || 'An unexpected error occurred. Please try refreshing the page.'}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
 
     // Firebase configuration
     const firebaseConfig = {
@@ -548,6 +577,7 @@
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="Enter your nickname"
                   className="w-full p-2 mb-4 border rounded"
+                  autoComplete="off"
                   required
                 />
                 <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
@@ -573,6 +603,7 @@
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email"
                   className="w-full p-2 mb-4 border rounded"
+                  autoComplete="off"
                   required
                 />
                 <input
@@ -581,6 +612,7 @@
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   className="w-full p-2 mb-4 border rounded"
+                  autoComplete="off"
                   required
                 />
                 <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
@@ -631,6 +663,7 @@
                     onChange={(e) => setInvitationEmail(e.target.value)}
                     placeholder="Enter email to invite"
                     className="w-full p-2 border rounded mb-2"
+                    autoComplete="off"
                   />
                   <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
                     Send Invitation
@@ -678,6 +711,7 @@
                   onChange={handleBeanInputChange}
                   placeholder="e.g., Illy"
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -691,6 +725,7 @@
                   onChange={handleBeanInputChange}
                   placeholder="e.g., Kawa"
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -704,6 +739,7 @@
                   onChange={handleBeanInputChange}
                   placeholder="e.g., Ethiopia"
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -715,6 +751,7 @@
                   value={beanForm.species}
                   onChange={handleBeanInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 >
                   <option value="">Select Species</option>
@@ -732,6 +769,7 @@
                   value={beanForm.roast}
                   onChange={handleBeanInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 >
                   <option value="">Select Roast</option>
@@ -749,6 +787,7 @@
                   value={beanForm.roastDate}
                   onChange={handleBeanInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -834,6 +873,7 @@
                   value={brewForm.beanId}
                   onChange={handleBrewInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 >
                   <option value="">-- Select a Bean --</option>
@@ -857,6 +897,7 @@
                   value={brewForm.grindSize}
                   onChange={handleBrewInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                 >
                   <option value="">Select Grind Size</option>
                   <option value="Fine">Fine</option>
@@ -874,6 +915,7 @@
                   value={brewForm.brewType}
                   onChange={handleBrewInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                 >
                   <option value="Espresso">Espresso</option>
                   <option value="Americano">Americano</option>
@@ -892,6 +934,7 @@
                   onChange={handleBrewInputChange}
                   placeholder="e.g., De’Longhi Dedica"
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                 />
               </div>
               <div className="mb-4">
@@ -902,6 +945,7 @@
                   value={brewForm.rating}
                   onChange={handleBrewInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                 >
                   {[1, 2, 3, 4, 5].map(n => (
                     <option key={n} value={n}>{n} Star{n > 1 ? 's' : ''}</option>
@@ -917,6 +961,7 @@
                   onChange={handleBrewInputChange}
                   placeholder="e.g., Nutty, bright acidity"
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                 />
               </div>
               <div className="mb-4">
@@ -928,6 +973,7 @@
                   value={brewForm.brewDate}
                   onChange={handleBrewInputChange}
                   className="w-full p-2 border rounded"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -955,13 +1001,13 @@
                       <h3 className="text-lg font-semibold">
                         {brew.brewType}
                       </h3>
-                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
+                      <p><strong>Brew Date:</strong> {brew.brewDate}</p>
                       <p className="flex justify-between">
-                        <span>Grind Size: {brew.grindSize || 'N/A'}</span>
-                        <span>Machine: {brew.machine || 'N/A'}</span>
+                        <span><strong>Grind Size:</strong> {brew.grindSize || 'N/A'}</span>
+                        <span><strong>Machine:</strong> {brew.machine || 'N/A'}</span>
                       </p>
-                      <p>Rating:<strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</strong></p>
-                      <p>Taste Notes:<strong> {brew.tasteNotes || 'N/A'}</strong></p>
+                      <p><strong>Rating:</strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</p>
+                      <p><strong>Taste Notes:</strong> {brew.tasteNotes || 'N/A'}</p>
                     </div>
                     <hr className="border-t border-gray-300 my-2" />
                     <div className="mb-2">
@@ -969,12 +1015,12 @@
                         {bean.brand || 'Unknown'} : {bean.beanName || 'Bean'}
                       </h3>
                       <p className="flex justify-between">
-                        <span>Roast: <strong>{bean.roast || 'N/A'}</strong></span>
-                        <span>Species: <strong> {bean.species || 'N/A'}</strong></span>
+                        <span><strong>Origin:</strong> {bean.origin || 'N/A'}</span>
+                        <span><strong>Species:</strong> {bean.species || 'N/A'}</span>
                       </p>
                       <p className="flex justify-between">
-                        <span>Origin: {bean.origin || 'N/A'}</span>
-                        <span>Roast Date: {bean.roastDate || 'N/A'}</span>
+                        <span><strong>Roast:</strong> {bean.roast || 'N/A'}</span>
+                        <span><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</span>
                       </p>
                       <p><strong>Added by:</strong> {bean.addedByNickname || 'Unknown'}</p>
                     </div>
@@ -993,8 +1039,12 @@
       );
     }
 
-    // Render the app
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    // Render the app with Error Boundary
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   </script>
   <script>
     if ('serviceWorker' in navigator) {
