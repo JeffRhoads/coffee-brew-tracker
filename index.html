@@ -96,6 +96,12 @@
   <script type="text/babel">
     const { useState, useEffect, Component } = React;
 
+    // Global error handler for unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled Promise Rejection:', event.reason);
+      event.preventDefault(); // Prevent crash
+    });
+
     // Error Boundary Component
     class ErrorBoundary extends Component {
       state = { hasError: false, error: null };
@@ -337,6 +343,10 @@
       // Invite a user to the family
       const handleInviteUser = async (e) => {
         e.preventDefault();
+        if (!user || !user.uid) {
+          setError('You must be logged in to invite users');
+          return;
+        }
         if (!invitationEmail.trim()) {
           setError('Please enter an email address');
           return;
@@ -570,7 +580,7 @@
           <div className="flex items-center justify-center min-h-screen">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h2 className="text-2xl font-bold mb-4">Set Your Nickname</h2>
-              <form onSubmit={handleSetNickname}>
+              <form onSubmit={handleSetNickname} autoComplete="off">
                 <input
                   type="text"
                   value={nickname}
@@ -596,7 +606,7 @@
           <div className="flex items-center justify-center min-h-screen">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h2 className="text-2xl font-bold mb-4">{isSignUp ? 'Sign Up' : 'Log In'}</h2>
-              <form onSubmit={handleAuth}>
+              <form onSubmit={handleAuth} autoComplete="off">
                 <input
                   type="email"
                   value={email}
@@ -612,7 +622,7 @@
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   className="w-full p-2 mb-4 border rounded"
-                  autoComplete="off"
+                  autoComplete="new-password"
                   required
                 />
                 <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
@@ -654,7 +664,7 @@
             {familyId ? (
               <>
                 <p className="mb-4">You are in a family (ID: {familyId})</p>
-                <form onSubmit={handleInviteUser} className="mb-4">
+                <form onSubmit={handleInviteUser} className="mb-4" autoComplete="off">
                   <label htmlFor="invitationEmail" className="block text-sm font-medium text-gray-700">Invite User by Email</label>
                   <input
                     type="email"
@@ -700,7 +710,7 @@
           {/* Add Bean Form */}
           <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
             <h2 className="text-xl font-semibold mb-4">Add Coffee Bean</h2>
-            <form onSubmit={handleBeanSubmit}>
+            <form onSubmit={handleBeanSubmit} autoComplete="off">
               <div className="mb-4">
                 <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
                 <input
@@ -864,7 +874,7 @@
           {/* Add Brew Form */}
           <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
             <h2 className="text-xl font-semibold mb-4">Add New Brew</h2>
-            <form onSubmit={handleBrewSubmit}>
+            <form onSubmit={handleBrewSubmit} autoComplete="off">
               <div className="mb-4">
                 <label htmlFor="beanId" className="block text-sm font-medium text-gray-700">Select Bean</label>
                 <select
