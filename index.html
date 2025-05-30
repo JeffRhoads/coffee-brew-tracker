@@ -58,6 +58,41 @@
 </head>
 <body>
   <div id="root" class="min-h-screen bg-gray-100 overflow-y-auto"></div>
+  <!-- Commented out XLSX script; re-enable if needed for import feature -->
+  <!--
+  <script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+      if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+          var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+          var firstSheetName = workbook.SheetNames[0];
+          var worksheet = workbook.Sheets[firstSheetName];
+          var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+          var filteredData = jsonData.filter(row => row.some(filledCell));
+          var headerRowIndex = filteredData.findIndex((row, index) =>
+            row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+          );
+          if (headerRowIndex === -1 || headerRowIndex > 25) {
+            headerRowIndex = 0;
+          }
+          var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+          csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+          return csv;
+        } catch (e) {
+          console.error(e);
+          return "";
+        }
+      }
+      return gk_fileData[filename] || "";
+    }
+  </script>
+  -->
   <script type="text/babel">
     const { useState, useEffect } = React;
 
@@ -80,8 +115,13 @@
     // Main App Component
     function App() {
       const [user, setUser] = useState(null);
+      const [nickname, setNickname] = useState('');
       const [brews, setBrews] = useState([]);
-      const [beans, setBeans] = useState([]);
+      const [personalBeans, setPersonalBeans] = useState([]);
+      const [sharedBeans, setSharedBeans] = useState([]);
+      const [familyId, setFamilyId] = useState(null);
+      const [pendingInvitations, setPendingInvitations] = useState([]);
+      const [invitationEmail, setInvitationEmail] = useState('');
       const [brewForm, setBrewForm] = useState({
         beanId: '',
         grindSize: '',
@@ -104,6 +144,7 @@
       const [isSignUp, setIsSignUp] = useState(false);
       const [error, setError] = useState('');
       const [isStandalone, setIsStandalone] = useState(false);
+      const [needsNickname, setNeedsNickname] = useState(false);
 
       // Check if running in standalone mode
       useEffect(() => {
@@ -112,33 +153,73 @@
         }
       }, []);
 
-      // Listen for auth state changes
+      // Listen for auth state changes and fetch user profile
       useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
           console.log('Auth state changed:', user ? user.uid : 'No user');
           setUser(user);
           if (user) {
-            fetchBeans(user.uid).catch(err => console.error('Fetch beans error:', err));
-            fetchBrews(user.uid).catch(err => console.error('Fetch brews error:', err));
+            // Fetch user profile
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              setNickname(userData.nickname || '');
+              setFamilyId(userData.familyId || null);
+              setNeedsNickname(!userData.nickname);
+              // Fetch data
+              fetchPersonalBeans(user.uid);
+              fetchBrews(user.uid);
+              if (userData.familyId) {
+                fetchSharedBeans(userData.familyId);
+                fetchPendingInvitations(user.email);
+              }
+            } else {
+              // Create user profile with email
+              await db.collection('users').doc(user.uid).set({
+                email: user.email,
+                nickname: '',
+                familyId: null
+              });
+              setNeedsNickname(true);
+            }
           } else {
             setBrews([]);
-            setBeans([]);
+            setPersonalBeans([]);
+            setSharedBeans([]);
+            setFamilyId(null);
+            setPendingInvitations([]);
+            setNickname('');
+            setNeedsNickname(false);
           }
         });
         return () => unsubscribe();
       }, []);
 
-      // Fetch beans from Firestore
-      const fetchBeans = async (uid) => {
+      // Fetch personal beans from Firestore
+      const fetchPersonalBeans = async (uid) => {
         try {
-          console.log('Fetching beans for user:', uid);
+          console.log('Fetching personal beans for user:', uid);
           const beansRef = db.collection('beans').where('userId', '==', uid);
           const snapshot = await beansRef.get();
           const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setBeans(beansData);
+          setPersonalBeans(beansData);
         } catch (err) {
-          console.error('Error fetching beans:', err);
-          setError('Failed to fetch beans: ' + err.message);
+          console.error('Error fetching personal beans:', err);
+          setError('Failed to fetch personal beans: ' + err.message);
+        }
+      };
+
+      // Fetch shared beans from Firestore
+      const fetchSharedBeans = async (familyId) => {
+        try {
+          console.log('Fetching shared beans for family:', familyId);
+          const beansRef = db.collection('families').doc(familyId).collection('beans');
+          const snapshot = await beansRef.get();
+          const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setSharedBeans(beansData);
+        } catch (err) {
+          console.error('Error fetching shared beans:', err);
+          setError('Failed to fetch shared beans: ' + err.message);
         }
       };
 
@@ -156,24 +237,134 @@
         }
       };
 
-      // Get bean details by ID
+      // Fetch pending invitations
+      const fetchPendingInvitations = async (email) => {
+        try {
+          console.log('Fetching pending invitations for:', email);
+          const invitationsRef = db.collection('invitations')
+            .where('invitedEmail', '==', email)
+            .where('status', '==', 'pending');
+          const snapshot = await invitationsRef.get();
+          const invitationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setPendingInvitations(invitationsData);
+        } catch (err) {
+          console.error('Error fetching invitations:', err);
+          setError('Failed to fetch invitations: ' + err.message);
+        }
+      };
+
+      // Set nickname
+      const handleSetNickname = async (e) => {
+        e.preventDefault();
+        if (!nickname.trim()) {
+          setError('Nickname cannot be empty');
+          return;
+        }
+        try {
+          await db.collection('users').doc(user.uid).update({ nickname: nickname.trim() });
+          setNeedsNickname(false);
+          setError('');
+          // Refresh user data
+          fetchPersonalBeans(user.uid);
+          fetchBrews(user.uid);
+          if (familyId) {
+            fetchSharedBeans(familyId);
+            fetchPendingInvitations(user.email);
+          }
+        } catch (err) {
+          console.error('Error setting nickname:', err);
+          setError('Failed to set nickname: ' + err.message);
+        }
+      };
+
+      // Create a new family
+      const handleCreateFamily = async () => {
+        try {
+          const familyRef = await db.collection('families').add({
+            members: [user.uid]
+          });
+          const newFamilyId = familyRef.id;
+          await db.collection('users').doc(user.uid).update({ familyId: newFamilyId });
+          setFamilyId(newFamilyId);
+          setSharedBeans([]);
+          setError('');
+        } catch (err) {
+          console.error('Error creating family:', err);
+          setError('Failed to create family: ' + err.message);
+        }
+      };
+
+      // Invite a user to the family
+      const handleInviteUser = async (e) => {
+        e.preventDefault();
+        if (!invitationEmail.trim()) {
+          setError('Please enter an email address');
+          return;
+        }
+        if (!familyId) {
+          setError('You must be in a family to invite users');
+          return;
+        }
+        try {
+          // Check if the email exists in users collection
+          const userSnapshot = await db.collection('users')
+            .where('email', '==', invitationEmail.trim())
+            .get();
+          if (userSnapshot.empty) {
+            setError('No user found with this email');
+            return;
+          }
+          const invitedUser = userSnapshot.docs[0].data();
+          if (invitedUser.familyId) {
+            setError('This user is already in a family');
+            return;
+          }
+          await db.collection('invitations').add({
+            familyId: familyId,
+            invitedEmail: invitationEmail.trim(),
+            invitedByUid: user.uid,
+            invitedByNickname: nickname,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          });
+          setInvitationEmail('');
+          setError('');
+          fetchPendingInvitations(user.email);
+        } catch (err) {
+          console.error('Error sending invitation:', err);
+          setError('Failed to send invitation: ' + err.message);
+        }
+      };
+
+      // Accept an invitation
+      const handleAcceptInvitation = async (invitationId, familyId) => {
+        try {
+          // Update invitation status
+          await db.collection('invitations').doc(invitationId).update({ status: 'accepted' });
+          // Update user's familyId
+          await db.collection('users').doc(user.uid).update({ familyId: familyId });
+          // Add user to family members
+          await db.collection('families').doc(familyId).update({
+            members: firebase.firestore.FieldValue.arrayUnion(user.uid)
+          });
+          setFamilyId(familyId);
+          fetchSharedBeans(familyId);
+          fetchPendingInvitations(user.email);
+          setError('');
+        } catch (err) {
+          console.error('Error accepting invitation:', err);
+          setError('Failed to accept invitation: ' + err.message);
+        }
+      };
+
+      // Get bean details by ID (for both personal and shared beans)
       const getBeanDetails = (beanId) => {
-        return beans.find(bean => bean.id === beanId) || {};
+        const personalBean = personalBeans.find(bean => bean.id === beanId);
+        if (personalBean) return personalBean;
+        return sharedBeans.find(bean => bean.id === beanId) || {};
       };
 
-      // Handle brew form input changes
-      const handleBrewInputChange = (e) => {
-        const { name, value } = e.target;
-        setBrewForm({ ...brewForm, [name]: value });
-      };
-
-      // Handle bean form input changes
-      const handleBeanInputChange = (e) => {
-        const { name, value } = e.target;
-        setBeanForm({ ...beanForm, [name]: value });
-      };
-
-      // Add a new bean
+      // Add a new bean (personal or shared)
       const handleBeanSubmit = async (e) => {
         e.preventDefault();
         if (!user) {
@@ -191,13 +382,22 @@
           species: beanForm.species,
           roast: beanForm.roast,
           roastDate: beanForm.roastDate,
-          userId: user.uid
+          addedBy: user.uid,
+          addedByNickname: nickname
         };
         console.log('Saving bean:', beanData);
         try {
-          await db.collection('beans').add(beanData);
+          if (familyId) {
+            // Add to shared beans
+            await db.collection('families').doc(familyId).collection('beans').add(beanData);
+            await fetchSharedBeans(familyId);
+          } else {
+            // Add to personal beans
+            beanData.userId = user.uid;
+            await db.collection('beans').add(beanData);
+            await fetchPersonalBeans(user.uid);
+          }
           setBeanForm({ brand: '', beanName: '', origin: '', species: '', roast: '', roastDate: '' });
-          await fetchBeans(user.uid);
           setError('');
         } catch (err) {
           console.error('Bean save error:', err);
@@ -247,11 +447,16 @@
       };
 
       // Delete bean
-      const deleteBean = async (id) => {
+      const deleteBean = async (id, isShared) => {
         try {
-          console.log('Deleting bean:', id);
-          await db.collection('beans').doc(id).delete();
-          await fetchBeans(user.uid);
+          console.log('Deleting bean:', id, 'Shared:', isShared);
+          if (isShared) {
+            await db.collection('families').doc(familyId).collection('beans').doc(id).delete();
+            await fetchSharedBeans(familyId);
+          } else {
+            await db.collection('beans').doc(id).delete();
+            await fetchPersonalBeans(user.uid);
+          }
         } catch (err) {
           console.error('Delete bean error:', err);
           setError('Failed to delete bean: ' + err.message);
@@ -297,6 +502,31 @@
       const handleRefresh = () => {
         window.location.reload();
       };
+
+      // Render nickname form if needed
+      if (needsNickname) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-4">Set Your Nickname</h2>
+              <form onSubmit={handleSetNickname}>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Enter your nickname"
+                  className="w-full p-2 mb-4 border rounded"
+                  required
+                />
+                <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
+                  Save Nickname
+                </button>
+              </form>
+              {error && <p className="text-red-500 mt-4">{error}</p>}
+            </div>
+          </div>
+        );
+      }
 
       // Render auth form if not logged in
       if (!user) {
@@ -352,6 +582,54 @@
                 Sign Out
               </button>
             </div>
+          </div>
+
+          {/* Family Management Section */}
+          <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 className="text-xl font-semibold mb-4">Family Management</h2>
+            {familyId ? (
+              <>
+                <p className="mb-4">You are in a family (ID: {familyId})</p>
+                <form onSubmit={handleInviteUser} className="mb-4">
+                  <label htmlFor="invitationEmail" className="block text-sm font-medium text-gray-700">Invite User by Email</label>
+                  <input
+                    type="email"
+                    id="invitationEmail"
+                    value={invitationEmail}
+                    onChange={(e) => setInvitationEmail(e.target.value)}
+                    placeholder="Enter email to invite"
+                    className="w-full p-2 border rounded mb-2"
+                  />
+                  <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
+                    Send Invitation
+                  </button>
+                </form>
+              </>
+            ) : (
+              <button
+                onClick={handleCreateFamily}
+                className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 active:bg-green-600 mb-4"
+              >
+                Create a Family
+              </button>
+            )}
+            {pendingInvitations.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Pending Invitations</h3>
+                {pendingInvitations.map(invitation => (
+                  <div key={invitation.id} className="mb-2 flex justify-between items-center">
+                    <p>Invited by {invitation.invitedByNickname} to Family {invitation.familyId}</p>
+                    <button
+                      onClick={() => handleAcceptInvitation(invitation.id, invitation.familyId)}
+                      className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 active:bg-green-600"
+                    >
+                      Accept
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {error && <p className="text-red-500 mt-4">{error}</p>}
           </div>
 
           {/* Add Bean Form */}
@@ -452,23 +730,26 @@
             {error && <p className="text-red-500 mt-4">{error}</p>}
           </div>
 
-          {/* Bean List */}
+          {/* Personal Beans List */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Your Beans</h2>
-            {beans.length === 0 ? (
-              <p>No beans yet. Add one above!</p>
+            <h2 className="text-xl font-semibold mb-4">Your Personal Beans</h2>
+            {personalBeans.length === 0 ? (
+              <p>No personal beans yet. Add one above!</p>
             ) : (
-              beans.map(bean => (
+              personalBeans.map(bean => (
                 <div key={bean.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
                   <h3 className="text-lg font-semibold">
                     {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
                   </h3>
-                  <p><strong>Origin:</strong> {bean.origin || 'N/A'}</p>
-                  <p><strong>Species:</strong> {bean.species || 'N/A'}</p>
+                  <p className="flex justify-between">
+                    <span><strong>Origin:</strong> {bean.origin || 'N/A'}</span>
+                    <span><strong>Species:</strong> {bean.species || 'N/A'}</span>
+                  </p>
                   <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
                   <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
+                  <p><strong>Added by:</strong> {bean.addedByNickname || 'You'}</p>
                   <button
-                    onClick={() => deleteBean(bean.id)}
+                    onClick={() => deleteBean(bean.id, false)}
                     className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
                   >
                     Delete
@@ -477,6 +758,37 @@
               ))
             )}
           </div>
+
+          {/* Shared Beans List */}
+          {familyId && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Shared Family Beans</h2>
+              {sharedBeans.length === 0 ? (
+                <p>No shared beans yet. Add one above!</p>
+              ) : (
+                sharedBeans.map(bean => (
+                  <div key={bean.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                    <h3 className="text-lg font-semibold">
+                      {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
+                    </h3>
+                    <p className="flex justify-between">
+                      <span><strong>Origin:</strong> {bean.origin || 'N/A'}</span>
+                      <span><strong>Species:</strong> {bean.species || 'N/A'}</span>
+                    </p>
+                    <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
+                    <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
+                    <p><strong>Added by:</strong> {bean.addedByNickname || 'Unknown'}</p>
+                    <button
+                      onClick={() => deleteBean(bean.id, true)}
+                      className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
 
           {/* Add Brew Form */}
           <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
@@ -493,9 +805,14 @@
                   required
                 >
                   <option value="">-- Select a Bean --</option>
-                  {beans.map(bean => (
+                  {personalBeans.map(bean => (
                     <option key={bean.id} value={bean.id}>
-                      {bean.brand} {bean.beanName} {bean.species} {bean.roast} ({bean.origin}, Roasted: {bean.roastDate})
+                      {bean.brand} {bean.beanName} {bean.species} {bean.roast} ({bean.origin}, Roasted: {bean.roastDate}) - Personal
+                    </option>
+                  ))}
+                  {sharedBeans.map(bean => (
+                    <option key={bean.id} value={bean.id}>
+                      {bean.brand} {bean.beanName} {bean.species} {bean.roast} ({bean.origin}, Roasted: {bean.roastDate}) - Shared
                     </option>
                   ))}
                 </select>
@@ -627,6 +944,7 @@
                         <span>Origin: {bean.origin || 'N/A'}</span>
                         <span>Roast Date: {bean.roastDate || 'N/A'}</span>
                       </p>
+                      <p><strong>Added by:</strong> {bean.addedByNickname || 'Unknown'}</p>
                     </div>
                     <button
                       onClick={() => deleteBrew(brew.id)}
