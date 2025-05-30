@@ -347,6 +347,7 @@
           setError('You must be logged in to invite users');
           return;
         }
+        console.log('User state before sending invitation:', user);
         if (!invitationEmail.trim()) {
           setError('Please enter an email address');
           return;
@@ -580,7 +581,7 @@
           <div className="flex items-center justify-center min-h-screen">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h2 className="text-2xl font-bold mb-4">Set Your Nickname</h2>
-              <form onSubmit={handleSetNickname} autoComplete="off">
+              <form onSubmit={handleSetNickname} autoComplete="off" formNoValidate data-bitwarden-watching="0">
                 <input
                   type="text"
                   value={nickname}
@@ -606,7 +607,7 @@
           <div className="flex items-center justify-center min-h-screen">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
               <h2 className="text-2xl font-bold mb-4">{isSignUp ? 'Sign Up' : 'Log In'}</h2>
-              <form onSubmit={handleAuth} autoComplete="off">
+              <form onSubmit={handleAuth} autoComplete="off" formNoValidate data-bitwarden-watching="0">
                 <input
                   type="email"
                   value={email}
@@ -664,7 +665,7 @@
             {familyId ? (
               <>
                 <p className="mb-4">You are in a family (ID: {familyId})</p>
-                <form onSubmit={handleInviteUser} className="mb-4" autoComplete="off">
+                <form onSubmit={handleInviteUser} className="mb-4" autoComplete="off" formNoValidate data-bitwarden-watching="0">
                   <label htmlFor="invitationEmail" className="block text-sm font-medium text-gray-700">Invite User by Email</label>
                   <input
                     type="email"
@@ -710,7 +711,7 @@
           {/* Add Bean Form */}
           <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
             <h2 className="text-xl font-semibold mb-4">Add Coffee Bean</h2>
-            <form onSubmit={handleBeanSubmit} autoComplete="off">
+            <form onSubmit={handleBeanSubmit} autoComplete="off" formNoValidate data-bitwarden-watching="0">
               <div className="mb-4">
                 <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
                 <input
@@ -823,12 +824,12 @@
                     {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
                   </h3>
                   <p className="flex justify-between">
-                    <span><strong>Origin:</strong> {bean.origin || 'N/A'}</span>
-                    <span><strong>Species:</strong> {bean.species || 'N/A'}</span>
+                    <span>Origin: {bean.origin || 'N/A'}</span>
+                    <span>Species: {bean.species || 'N/A'}</span>
                   </p>
-                  <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
-                  <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
-                  <p><strong>Added by:</strong> {bean.addedByNickname || 'You'}</p>
+                  <p>Roast: {bean.roast || 'N/A'}</p>
+                  <p>Roast Date: {bean.roastDate || 'N/A'}</p>
+                  <p>Added by: {bean.addedByNickname || 'You'}</p>
                   <button
                     onClick={() => deleteBean(bean.id, false)}
                     className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
@@ -853,12 +854,12 @@
                       {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
                     </h3>
                     <p className="flex justify-between">
-                      <span><strong>Origin:</strong> {bean.origin || 'N/A'}</span>
-                      <span><strong>Species:</strong> {bean.species || 'N/A'}</span>
+                      <span>Origin: {bean.origin || 'N/A'}</span>
+                      <span>Species: {bean.species || 'N/A'}</span>
                     </p>
-                    <p><strong>Roast:</strong> {bean.roast || 'N/A'}</p>
-                    <p><strong>Roast Date:</strong> {bean.roastDate || 'N/A'}</p>
-                    <p><strong>Added by:</strong> {bean.addedByNickname || 'Unknown'}</p>
+                    <p>Roast: {bean.roast || 'N/A'}</p>
+                    <p>Roast Date: {bean.roastDate || 'N/A'}</p>
+                    <p>Added by: {bean.addedByNickname || 'Unknown'}</p>
                     <button
                       onClick={() => deleteBean(bean.id, true)}
                       className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
@@ -874,7 +875,7 @@
           {/* Add Brew Form */}
           <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
             <h2 className="text-xl font-semibold mb-4">Add New Brew</h2>
-            <form onSubmit={handleBrewSubmit} autoComplete="off">
+            <form onSubmit={handleBrewSubmit} autoComplete="off" formNoValidate data-bitwarden-watching="0">
               <div className="mb-4">
                 <label htmlFor="beanId" className="block text-sm font-medium text-gray-700">Select Bean</label>
                 <select
@@ -1032,7 +1033,7 @@
                         <span>Origin: {bean.origin || 'N/A'}</span>
                         <span>Roast Date: {bean.roastDate || 'N/A'}</span>
                       </p>
-                      <p><strong>Added by:</strong> {bean.addedByNickname || 'Unknown'}</p>
+                      <p>Added by: {bean.addedByNickname || 'Unknown'}</p>
                     </div>
                     <button
                       onClick={() => deleteBrew(brew.id)}
@@ -1049,16 +1050,26 @@
       );
     }
 
-    // Render the app with Error Boundary
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    );
+    // Delay rendering until after page load to catch early unhandled rejections
+    window.addEventListener('load', () => {
+      ReactDOM.createRoot(document.getElementById('root')).render(
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      );
+    });
   </script>
   <script>
+    // Clear service worker cache on load to prevent cached BitWarden scripts
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Error:', err));
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      }).catch(err => console.error('Service Worker Unregistration Error:', err));
+
+      // Register new service worker
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Registration Error:', err));
     }
   </script>
 </body>
