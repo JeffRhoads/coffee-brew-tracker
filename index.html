@@ -348,6 +348,15 @@
           return;
         }
         console.log('User state before sending invitation:', user);
+        console.log('Firebase Auth Current User:', firebase.auth().currentUser);
+        console.log('Attempting to write invitation with data:', {
+          familyId: familyId,
+          invitedEmail: invitationEmail.trim(),
+          invitedByUid: user.uid,
+          invitedByNickname: nickname,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
         if (!invitationEmail.trim()) {
           setError('Please enter an email address');
           return;
@@ -370,14 +379,17 @@
             setError('This user is already in a family');
             return;
           }
-          await db.collection('invitations').add({
+          const invitationData = {
             familyId: familyId,
             invitedEmail: invitationEmail.trim(),
             invitedByUid: user.uid,
             invitedByNickname: nickname,
             status: 'pending',
             createdAt: new Date().toISOString()
-          });
+          };
+          console.log('Writing invitation to Firestore:', invitationData);
+          await db.collection('invitations').add(invitationData);
+          console.log('Invitation successfully written to Firestore');
           setInvitationEmail('');
           setError('');
           await fetchPendingInvitations(user.email);
