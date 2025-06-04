@@ -1,6 +1,7 @@
 const {onRequest, HttpsError} = require("firebase-functions/v2/https");
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const nodemailer = require("nodemailer"); // Import nodemailer
 
 admin.initializeApp();
 
@@ -39,7 +40,11 @@ exports.initializeInvitationsCollection = onRequest({
 
 
 // Firestore Triggered Function (equivalent of Gen 1 onCreate)
-exports.onNewInvitationCreate = onDocumentCreated("invitations/{invitationId}", (event) => {
+exports.onNewInvitationCreate = onDocumentCreated({
+  document: "invitations/{invitationId}",
+  region: "us-central1", // Specify the region
+  database: "(default)", // Use the default database instance
+}, async (event) => { // Added async keyword here
   const snapshot = event.data;
 
   if (!snapshot) {
@@ -50,30 +55,47 @@ exports.onNewInvitationCreate = onDocumentCreated("invitations/{invitationId}", 
   const data = snapshot.data();
   console.log("New invitation document created:", data);
 
-  // ** Email Sending Logic Goes Here **
-  // This is where you would add the code to send the email.
-  // Example (requires a configured email service):
-  /*
-    const invitedEmail = data.invitedEmail;
-    const familyId = data.familyId;
-    const invitedByNickname = data.invitedByNickname;
+  // ** Email Sending Logic Starts Here **
 
-    // Use an email sending library or service (like nodemailer, SendGrid, etc.)
-    // and your email service credentials to send the email.
+  const invitedEmail = data.invitedEmail;
+  // const familyId = data.familyId;
+  // const invitedByNickname = data.invitedByNickname;
 
-    console.log(`Attempting to send invitation email to ${invitedEmail} for family ${familyId}`);
+  // Configure Nodemailer transporter
+  // My email creds: email.host="smtp.gmail.com" email.port="587" email.secure="false" email.user="" email.pass="" email.from="""
+  // My App Password is gexc laam uyun rfhu
+  // Use environment variables for secure storage of credentials
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST, // e.g., 'smtp.sendgrid.net'
+    port: parseInt(process.env.EMAIL_PORT), // e.g., 587
+    secure: process.env.EMAIL_SECURE === "true", // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_USER, // e.g., 'apikey' for SendGrid
+      pass: process.env.EMAIL_PASS, // e.g., your SendGrid API key
+    },
+  });
 
-    // Example with a hypothetical sendEmail function:
-    // await sendEmail({
-    //     to: invitedEmail,
-    //     from: 'noreply@your-app.com', // Replace with your sender email
-    //     subject: 'You've been invited to join a family on Coffee Brew Tracker!',
-    //     text: `Hello! You've been invited by ${invitedByNickname} to join their family on Coffee Brew Tracker. Family ID: ${familyId}`,
-    //     html: `<p>Hello!</p><p>You've been invited by ${invitedByNickname} to join their family on Coffee Brew Tracker.</p><p>Family ID: <strong>${familyId}</strong></p>`
-    // });
+  // Compose email
+  const mailOptions = {
+    from: process.env.EMAIL_FROM, // Sender address (must be verified with your email service)
+    to: invitedEmail, // Recipient address
+    subject: "You've been invited to join a family on Coffee Brew Tracker!",
+    text: "Hello! You've been invited by ${invitedByNickname} to join their family " +
+    "on Coffee Brew Tracker. Family ID: ${familyId}",
+    html: "<p>Hello!</p><p>You've been invited by ${invitedByNickname} to join their family " +
+    "on Coffee Brew Tracker.</p><p>Family ID: <strong>${familyId}</strong></p>",
+  };
 
-    console.log('Email sending logic would be here.');
-    */
+  // Send email
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Invitation email sent to ${invitedEmail}`);
+  } catch (emailError) {
+    console.error(`Error sending invitation email to ${invitedEmail}:`, emailError);
+    // Consider handling the error (e.g., logging to a separate error collection)
+  }
 
-  return null; // Important to return null or a Promise
+  // ** Email Sending Logic Ends Here **
+
+  return null;
 });

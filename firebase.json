@@ -38,6 +38,7 @@
     {
       "source": "functions",
       "codebase": "default",
+      "region": "us-central1", // Set default region for this codebase
       "ignore": [
         "node_modules",
         ".git",
@@ -46,8 +47,26 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
-      ]
+         "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ],
+      "function": [
+        {
+          "function": "onNewInvitationCreate",
+          "region": "us-central1", // Specify the region here (redundant if set at codebase level, but good for clarity)
+          "env": { // Add the env object here
+            "EMAIL_HOST": "smtp.gmail.com",
+            "EMAIL_PORT": "587",
+            "EMAIL_SECURE": "false",
+            "EMAIL_USER": "jeffrhoads2@gmail.com",
+            "EMAIL_PASS": "gexc laam uyun rfhu",
+            "EMAIL_FROM": "Jeff Rhoads <JeffRhoads2@gmail.com>"
+          }
+        },
+        {
+          "function": "initializeInvitationsCollection",
+          "region": "us-central1" // Set region for the other function too for consistency
+        }
+      ]      
     }
-  ]
+   ]
 }
