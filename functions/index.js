@@ -55,6 +55,10 @@ exports.onNewInvitationCreate = onDocumentCreated({
   const data = snapshot.data();
   console.log("New invitation document created:", data);
 
+  // Add this line to log the EMAIL_HOST environment variable
+  console.log("EMAIL_HOST environment variable:", process.env.EMAIL_HOST);
+  console.log("TEST_VAR environment variable:", process.env.TEST_VAR); // Add this line
+
   // ** Email Sending Logic Starts Here **
 
   const invitedEmail = data.invitedEmail;

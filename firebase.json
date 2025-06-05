@@ -59,7 +59,8 @@
             "EMAIL_SECURE": "false",
             "EMAIL_USER": "jeffrhoads2@gmail.com",
             "EMAIL_PASS": "gexc laam uyun rfhu",
-            "EMAIL_FROM": "Jeff Rhoads <JeffRhoads2@gmail.com>"
+            "EMAIL_FROM": "Jeff Rhoads <JeffRhoads2@gmail.com>",
+            "TEST_VAR": "hello_world"
           }
         },
         {
