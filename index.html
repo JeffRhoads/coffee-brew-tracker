@@ -1,0 +1,1130 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#3c2f2f">
+  <title>Coffee Brew Tracker</title>
+  <link rel="manifest" href="/manifest.json">
+  <link href="/css/output.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+  <link rel="apple-touch-icon" href="/icon.png">
+</head>
+<body>
+  <div id="root" class="min-h-screen bg-gray-100 overflow-y-auto"></div>
+  <!-- Commented out XLSX script; re-enable if needed for import feature -->
+  <!--
+  <script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+      if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+          var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+          var firstSheetName = workbook.SheetNames[0];
+          var worksheet = workbook.Sheets[firstSheetName];
+          var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+          var filteredData = jsonData.filter(row => row.some(filledCell));
+          var headerRowIndex = filteredData.findIndex((row, index) =>
+            row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+          );
+          if (headerRowIndex === -1 || headerRowIndex > 25) {
+            headerRowIndex = 0;
+          }
+          var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+          csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+          return csv;
+        } catch (e) {
+          console.error(e);
+          return "";
+        }
+      }
+      return gk_fileData[filename] || "";
+    }
+  </script>
+  -->
+  <script type="text/babel">
+    const { useState, useEffect, Component } = React;
+
+    // Global error handler for unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled Promise Rejection:', event.reason);
+      event.preventDefault(); // Prevent crash
+    });
+
+    // Error Boundary Component
+    class ErrorBoundary extends Component {
+      state = { hasError: false, error: null };
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-2xl font-bold mb-4">Something Went Wrong</h2>
+                <p className="text-red-500 mb-4">{this.state.error?.message || 'An unexpected error occurred. Please try refreshing the page.'}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Main App Component
+    function App() {
+      const [user, setUser] = useState(null);
+      const [nickname, setNickname] = useState('');
+      const [brews, setBrews] = useState([]);
+      const [personalBeans, setPersonalBeans] = useState([]);
+      const [sharedBeans, setSharedBeans] = useState([]);
+      const [familyId, setFamilyId] = useState(null);
+      const [pendingInvitations, setPendingInvitations] = useState([]);
+      const [invitationEmail, setInvitationEmail] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [isSignUp, setIsSignUp] = useState(false);
+      const [error, setError] = useState('');
+      const [isStandalone, setIsStandalone] = useState(false);
+      const [needsNickname, setNeedsNickname] = useState(false);
+      const [isLoading, setIsLoading] = useState(true);
+
+      const [brewForm, setBrewForm] = useState({
+        beanId: '',
+        grindSize: '',
+        brewType: 'Espresso',
+        machine: '',
+        rating: 1,
+        tasteNotes: '',
+        brewDate: new Date().toISOString().split('T')[0]
+      });
+
+      const [beanForm, setBeanForm] = useState({
+        brand: '',
+        beanName: '',
+        origin: '',
+        species: '',
+        roast: '',
+        roastDate: ''
+      });
+
+      // Check if running in standalone mode
+      useEffect(() => {
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+          setIsStandalone(true);
+        }
+      }, []);
+
+      // Listen for auth state changes and fetch user profile
+      useEffect(() => {
+        setIsLoading(true);
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+          console.log('Auth state changed:', user ? user.uid : 'No user');
+          setUser(user);
+          if (user) {
+            try {
+              // Fetch user profile
+              const userDocRef = db.collection('users').doc(user.uid);
+              const userDoc = await userDocRef.get();
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                setNickname(userData.nickname || '');
+                setFamilyId(userData.familyId || null);
+                setNeedsNickname(!userData.nickname);
+                // Fetch data
+                await fetchPersonalBeans(user.uid);
+                await fetchBrews(user.uid);
+                if (userData.familyId) {
+                  await fetchSharedBeans(userData.familyId);
+                  await fetchPendingInvitations(user.email);
+                }
+              } else {
+                // Create user profile with email
+                await userDocRef.set({
+                  email: user.email,
+                  nickname: '',
+                  familyId: null
+                });
+                setNeedsNickname(true);
+              }
+            } catch (err) {
+              console.error('Error initializing user:', err);
+              setError('Failed to initialize user: ' + err.message);
+            }
+          } else {
+            setBrews([]);
+            setPersonalBeans([]);
+            setSharedBeans([]);
+            setFamilyId(null);
+            setPendingInvitations([]);
+            setNickname('');
+            setNeedsNickname(false);
+          }
+          setIsLoading(false);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      // Fetch personal beans from Firestore
+      const fetchPersonalBeans = async (uid) => {
+        try {
+          console.log('Fetching personal beans for user:', uid);
+          const beansRef = db.collection('beans').where('userId', '==', uid);
+          const snapshot = await beansRef.get();
+          const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setPersonalBeans(beansData);
+        } catch (err) {
+          console.error('Error fetching personal beans:', err);
+          setError('Failed to fetch personal beans: ' + err.message);
+        }
+      };
+
+      // Fetch shared beans from Firestore
+      const fetchSharedBeans = async (familyId) => {
+        try {
+          console.log('Fetching shared beans for family:', familyId);
+          const beansRef = db.collection('families').doc(familyId).collection('beans');
+          const snapshot = await beansRef.get();
+          const beansData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setSharedBeans(beansData);
+        } catch (err) {
+          console.error('Error fetching shared beans:', err);
+          setError('Failed to fetch shared beans: ' + err.message);
+        }
+      };
+
+      // Fetch brews from Firestore
+      const fetchBrews = async (uid) => {
+        try {
+          console.log('Fetching brews for user:', uid);
+          const brewsRef = db.collection('brews').where('userId', '==', uid);
+          const snapshot = await brewsRef.get();
+          const brewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setBrews(brewsData.sort((a, b) => new Date(b.brewDate) - new Date(a.brewDate)));
+        } catch (err) {
+          console.error('Error fetching brews:', err);
+          setError('Failed to fetch brews: ' + err.message);
+        }
+      };
+
+      // Fetch pending invitations (avoid real-time listeners)
+      const fetchPendingInvitations = async (email) => {
+        try {
+          console.log('Fetching pending invitations for:', email);
+          const invitationsRef = db.collection('invitations')
+            .where('invitedEmail', '==', email)
+            .where('status', '==', 'pending');
+          const snapshot = await invitationsRef.get(); // One-time fetch
+          const invitationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setPendingInvitations(invitationsData);
+        } catch (err) {
+          console.error('Error fetching invitations:', err);
+          setError('Failed to fetch invitations: ' + err.message);
+        }
+      };
+
+      // Set nickname
+      const handleSetNickname = async (e) => {
+        e.preventDefault();
+        if (!nickname.trim()) {
+          setError('Nickname cannot be empty');
+          return;
+        }
+        try {
+          await db.collection('users').doc(user.uid).update({ nickname: nickname.trim() });
+          setNeedsNickname(false);
+          setError('');
+          // Refresh user data
+          await fetchPersonalBeans(user.uid);
+          await fetchBrews(user.uid);
+          if (familyId) {
+            await fetchSharedBeans(familyId);
+            await fetchPendingInvitations(user.email);
+          }
+        } catch (err) {
+          console.error('Error setting nickname:', err);
+          setError('Failed to set nickname: ' + err.message);
+        }
+      };
+
+      // Create a new family
+      const handleCreateFamily = async () => {
+        try {
+          const familyRef = await db.collection('families').add({
+            members: [user.uid]
+          });
+          const newFamilyId = familyRef.id;
+          await db.collection('users').doc(user.uid).update({ familyId: newFamilyId });
+          setFamilyId(newFamilyId);
+          setSharedBeans([]);
+          setError('');
+        } catch (err) {
+          console.error('Error creating family:', err);
+          setError('Failed to create family: ' + err.message);
+        }
+      };
+
+      // Invite a user to the family
+      const handleInviteUser = async (e) => {
+        e.preventDefault();
+        if (!user || !user.uid) {
+          setError('You must be logged in to invite users');
+          return;
+        }
+        console.log('User state before sending invitation:', user);
+        console.log('Firebase Auth Current User:', firebase.auth().currentUser);
+        // Force token refresh
+        try {
+          console.log('Forcing token refresh before write operation');
+          await user.getIdToken(true);
+          console.log('Token refreshed successfully');
+        } catch (tokenErr) {
+          console.error('Error refreshing token:', tokenErr);
+          setError('Failed to refresh authentication token: ' + tokenErr.message);
+          return;
+        }
+        console.log('Attempting to write invitation with data:', {
+          familyId: familyId,
+          invitedEmail: invitationEmail.trim(),
+
+          invitedByUid: user.uid,
+          invitedByNickname: nickname,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
+        if (!invitationEmail.trim()) {
+          setError('Please enter an email address');
+          return;
+        }
+        if (!familyId) {
+          setError('You must be in a family to invite users');
+          return;
+        }
+        try {
+          // Check if the email exists in users collection
+          const lowercasedEmail = invitationEmail.trim().toLowerCase();
+          const userSnapshot = await db.collection('users').where('email', '==', lowercasedEmail).get();
+          if (userSnapshot.empty) {
+            setError('No user found with this email');
+            return;
+          }
+          const invitedUser = userSnapshot.docs[0].data();
+          if (invitedUser.familyId) {
+            setError('This user is already in a family');
+            return;
+          }
+          const invitationData = {
+            familyId: familyId,
+            invitedEmail: lowercasedEmail,
+            invitedByUid: user.uid,
+            invitedByNickname: nickname,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          };
+          console.log('Writing invitation to Firestore:', invitationData);
+        console.log('Before Firestore write: User UID -', user.uid, 'Family ID -', familyId);
+        console.log('Before Firestore write: User UID -', user.uid, 'Family ID -', familyId);
+        try {
+            await db.collection('invitations').add(invitationData);
+          } catch (err) {
+            console.error('Initial write to invitations failed:', err);
+            console.error('Error details:', JSON.stringify(err, null, 2));
+            // Fallback: Create the invitations collection with a test document
+            console.log('Attempting to create invitations collection with a test document');
+            try {
+              await db.collection('invitations').doc('test-init').set({
+                familyId: 'test-family',
+                invitedEmail: 'test@example.com',
+                invitedByUid: user.uid,
+                invitedByNickname: nickname,
+                status: 'test',
+                createdAt: new Date().toISOString()
+              });
+              console.log('Test document created successfully');
+            } catch (fallbackErr) {
+              console.error('Fallback write failed:', fallbackErr);
+              console.error('Fallback error details:', JSON.stringify(fallbackErr, null, 2));
+              throw fallbackErr; // Re-throw to handle in outer catch block
+            }
+            console.log('Test document created, retrying invitation write');
+            await db.collection('invitations').add(invitationData);
+          }
+        console.log('After Firestore write attempt.');
+        console.log('After Firestore write attempt.');
+          console.log('Invitation successfully written to Firestore');
+          setInvitationEmail('');
+          setError('');
+          await fetchPendingInvitations(user.email);
+        } catch (err) {
+          console.error('Error sending invitation:', err);
+          setError('Failed to send invitation: ' + err.message);
+        }
+      };
+
+      // Accept an invitation
+      const handleAcceptInvitation = async (invitationId, familyId) => {
+        try {
+          // Update invitation status
+          await db.collection('invitations').doc(invitationId).update({ status: 'accepted' });
+          // Update user's familyId
+          await db.collection('users').doc(user.uid).update({ familyId: familyId });
+          // Add user to family members
+          await db.collection('families').doc(familyId).update({
+            members: firebase.firestore.FieldValue.arrayUnion(user.uid)
+          });
+          setFamilyId(familyId);
+          await fetchSharedBeans(familyId);
+          await fetchPendingInvitations(user.email);
+          setError('');
+        } catch (err) {
+          console.error('Error accepting invitation:', err);
+          setError('Failed to accept invitation: ' + err.message);
+        }
+      };
+
+      // Get bean details by ID (for both personal and shared beans)
+      const getBeanDetails = (beanId) => {
+        const personalBean = personalBeans.find(bean => bean.id === beanId);
+        if (personalBean) return personalBean;
+        return sharedBeans.find(bean => bean.id === beanId) || {};
+      };
+
+      // Handle brew form input changes
+      const handleBrewInputChange = (e) => {
+        const { name, value } = e.target;
+        setBrewForm({ ...brewForm, [name]: value });
+      };
+
+      // Handle bean form input changes
+      const handleBeanInputChange = (e) => {
+        const { name, value } = e.target;
+        setBeanForm({ ...beanForm, [name]: value });
+      };
+
+      // Add a new bean (personal or shared)
+      const handleBeanSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) {
+          setError('No authenticated user');
+          return;
+        }
+        if (!beanForm.brand || !beanForm.beanName || !beanForm.origin || !beanForm.species || !beanForm.roast || !beanForm.roastDate) {
+          setError('All bean fields are required');
+          return;
+        }
+        const beanData = {
+          brand: beanForm.brand.trim(),
+          beanName: beanForm.beanName.trim(),
+          origin: beanForm.origin.trim(),
+          species: beanForm.species,
+          roast: beanForm.roast,
+          roastDate: beanForm.roastDate,
+          addedBy: user.uid,
+          addedByNickname: nickname
+        };
+        console.log('Saving bean:', beanData);
+        try {
+          if (familyId) {
+            // Add to shared beans
+            await db.collection('families').doc(familyId).collection('beans').add(beanData);
+            await fetchSharedBeans(familyId);
+          } else {
+            // Add to personal beans
+            beanData.userId = user.uid;
+            await db.collection('beans').add(beanData);
+            await fetchPersonalBeans(user.uid);
+          }
+          setBeanForm({ brand: '', beanName: '', origin: '', species: '', roast: '', roastDate: '' });
+          setError('');
+        } catch (err) {
+          console.error('Bean save error:', err);
+          setError('Failed to save bean: ' + err.message);
+        }
+      };
+
+      // Add a new brew
+      const handleBrewSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) {
+          setError('No authenticated user');
+          return;
+        }
+        if (!brewForm.beanId) {
+          setError('Please select a bean');
+          return;
+        }
+        const brewData = {
+          beanId: brewForm.beanId,
+          grindSize: brewForm.grindSize.trim(),
+          brewType: brewForm.brewType,
+          machine: brewForm.machine.trim(),
+          rating: parseInt(brewForm.rating),
+          tasteNotes: brewForm.tasteNotes.trim(),
+          brewDate: brewForm.brewDate,
+          userId: user.uid
+        };
+        console.log('Saving brew:', brewData);
+        try {
+          await db.collection('brews').add(brewData);
+          setBrewForm({
+            beanId: '',
+            grindSize: '',
+            brewType: 'Espresso',
+            machine: '',
+            rating: 1,
+            tasteNotes: '',
+            brewDate: new Date().toISOString().split('T')[0]
+          });
+          await fetchBrews(user.uid);
+          setError('');
+        } catch (err) {
+          console.error('Brew save error:', err);
+          setError('Failed to save brew: ' + err.message);
+        }
+      };
+
+      // Delete bean
+      const deleteBean = async (id, isShared) => {
+        try {
+          console.log('Deleting bean:', id, 'Shared:', isShared);
+          if (isShared) {
+            await db.collection('families').doc(familyId).collection('beans').doc(id).delete();
+            await fetchSharedBeans(familyId);
+          } else {
+            await db.collection('beans').doc(id).delete();
+            await fetchPersonalBeans(user.uid);
+          }
+        } catch (err) {
+          console.error('Delete bean error:', err);
+          setError('Failed to delete bean: ' + err.message);
+        }
+      };
+
+      // Delete brew
+      const deleteBrew = async (id) => {
+        try {
+          console.log('Deleting brew:', id);
+          await db.collection('brews').doc(id).delete();
+          await fetchBrews(user.uid);
+        } catch (err) {
+          console.error('Delete brew error:', err);
+          setError('Failed to delete brew: ' + err.message);
+        }
+      };
+
+      // Handle authentication
+      const handleAuth = async (e) => {
+        e.preventDefault();
+        try {
+          console.log('Attempting auth:', isSignUp ? 'Sign Up' : 'Log In', email);
+          if (isSignUp) {
+            await auth.createUserWithEmailAndPassword(email, password);
+          } else {
+            await auth.signInWithEmailAndPassword(email, password);
+          }
+          setError('');
+        } catch (err) {
+          console.error('Auth error:', err);
+          setError(err.message);
+        }
+      };
+
+      // Sign out
+      const signOut = () => {
+        console.log('Signing out');
+        auth.signOut();
+      };
+
+      // Refresh the app
+      const handleRefresh = () => {
+        window.location.reload();
+      };
+
+      // Render loading state
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <p>Loading...</p>
+          </div>
+        );
+      }
+
+      // Render nickname form if needed
+      if (needsNickname) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-4">Set Your Nickname</h2>
+              <form onSubmit={handleSetNickname} autoComplete="off" formNoValidate data-bitwarden-watching="0">
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Enter your nickname"
+                  className="w-full p-2 mb-4 border rounded"
+                  autoComplete="off"
+                  required
+                />
+                <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
+                  Save Nickname
+                </button>
+              </form>
+              {error && <p className="text-red-500 mt-4">{error}</p>}
+            </div>
+          </div>
+        );
+      }
+
+      // Render auth form if not logged in
+      if (!user) {
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-4">{isSignUp ? 'Sign Up' : 'Log In'}</h2>
+              <form onSubmit={handleAuth} autoComplete="off" formNoValidate data-bitwarden-watching="0">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="w-full p-2 mb-4 border rounded"
+                  autoComplete="off"
+                  required
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full p-2 mb-4 border rounded"
+                  autoComplete="new-password"
+                  required
+                />
+                <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
+                  {isSignUp ? 'Sign Up' : 'Log In'}
+                </button>
+              </form>
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="mt-4 text-blue-500 hover:underline active:text-blue-600"
+              >
+                {isSignUp ? 'Already have an account? Log In' : 'Need an account? Sign Up'}
+              </button>
+              {error && <p className="text-red-500 mt-4">{error}</p>}
+            </div>
+          </div>
+        );
+      }
+
+      // Render main app
+      return (
+        <div className="container mx-auto p-4 max-w-md">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Coffee Brew Tracker</h1>
+            <div className="flex space-x-2">
+              {isStandalone && (
+                <button onClick={handleRefresh} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 active:bg-gray-600">
+                  Refresh
+                </button>
+              )}
+              <button onClick={signOut} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 active:bg-red-600">
+                Sign Out
+              </button>
+            </div>
+          </div>
+
+          {/* Family Management Section */}
+          <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 className="text-xl font-semibold mb-4">Family Management</h2>
+            {familyId ? (
+              <>
+                <p className="mb-4">You are in a family (ID: {familyId})</p>
+                <form onSubmit={handleInviteUser} className="mb-4" autoComplete="off" formNoValidate data-bitwarden-watching="0">
+                  <label htmlFor="invitationEmail" className="block text-sm font-medium text-gray-700">Invite User by Email</label>
+                  <input
+                    type="email"
+                    id="invitationEmail"
+                    value={invitationEmail}
+                    onChange={(e) => setInvitationEmail(e.target.value)}
+                    placeholder="Enter email to invite"
+                    className="w-full p-2 border rounded mb-2"
+                    autoComplete="off"
+                  />
+                  <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600">
+                    Send Invitation
+                  </button>
+                </form>
+              </>
+            ) : (
+              <button
+                onClick={handleCreateFamily}
+                className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600 active:bg-green-600 mb-4"
+              >
+                Create a Family
+              </button>
+            )}
+            {pendingInvitations.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Pending Invitations</h3>
+                {pendingInvitations.map(invitation => (
+                  <div key={invitation.id} className="mb-2 flex justify-between items-center">
+                    <p>Invited by {invitation.invitedByNickname} to Family {invitation.familyId}</p>
+                    <button
+                      onClick={() => handleAcceptInvitation(invitation.id, invitation.familyId)}
+                      className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 active:bg-green-600"
+                    >
+                      Accept
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {error && <p className="text-red-500 mt-4">{error}</p>}
+          </div>
+
+          {/* Add Bean Form */}
+          <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 className="text-xl font-semibold mb-4">Add Coffee Bean</h2>
+            <form onSubmit={handleBeanSubmit} autoComplete="off" formNoValidate data-bitwarden-watching="0">
+              <div className="mb-4">
+                <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Brand</label>
+                <input
+                  type="text"
+                  name="brand"
+                  id="brand"
+                  value={beanForm.brand}
+                  onChange={handleBeanInputChange}
+                  placeholder="e.g., Illy"
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="beanName" className="block text-sm font-medium text-gray-700">Bean Name</label>
+                <input
+                  type="text"
+                  name="beanName"
+                  id="beanName"
+                  value={beanForm.beanName}
+                  onChange={handleBeanInputChange}
+                  placeholder="e.g., Kawa"
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="origin" className="block text-sm font-medium text-gray-700">Origin</label>
+                <input
+                  type="text"
+                  name="origin"
+                  id="origin"
+                  value={beanForm.origin}
+                  onChange={handleBeanInputChange}
+                  placeholder="e.g., Ethiopia"
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="species" className="block text-sm font-medium text-gray-700">Species</label>
+                <select
+                  name="species"
+                  id="species"
+                  value={beanForm.species}
+                  onChange={handleBeanInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                >
+                  <option value="">Select Species</option>
+                  <option value="Arabica">Arabica</option>
+                  <option value="Robusta">Robusta</option>
+                  <option value="Excelsa">Excelsa</option>
+                  <option value="Liberica">Liberica</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="roast" className="block text-sm font-medium text-gray-700">Roast</label>
+                <select
+                  name="roast"
+                  id="roast"
+                  value={beanForm.roast}
+                  onChange={handleBeanInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                >
+                  <option value="">Select Roast</option>
+                  <option value="Light">Light</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Dark">Dark</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="roastDate" className="block text-sm font-medium text-gray-700">Roast Date</label>
+                <input
+                  type="date"
+                  name="roastDate"
+                  id="roastDate"
+                  value={beanForm.roastDate}
+                  onChange={handleBeanInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600"
+              >
+                Save Bean
+              </button>
+            </form>
+            {error && <p className="text-red-500 mt-4">{error}</p>}
+          </div>
+
+          {/* Personal Beans List */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Your Personal Beans</h2>
+            {personalBeans.length === 0 ? (
+              <p>No personal beans yet. Add one above!</p>
+            ) : (
+              personalBeans.map(bean => (
+                <div key={bean.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                  <h3 className="text-lg font-semibold">
+                    {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
+                  </h3>
+                  <p className="flex justify-between">
+                    <span>Origin: {bean.origin || 'N/A'}</span>
+                    <span>Species: {bean.species || 'N/A'}</span>
+                  </p>
+                  <p>Roast: {bean.roast || 'N/A'}</p>
+                  <p>Roast Date: {bean.roastDate || 'N/A'}</p>
+                  <p>Added by: {bean.addedByNickname || 'You'}</p>
+                  <button
+                    onClick={() => deleteBean(bean.id, false)}
+                    className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Shared Beans List */}
+          {familyId && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Shared Family Beans</h2>
+              {sharedBeans.length === 0 ? (
+                <p>No shared beans yet. Add one above!</p>
+              ) : (
+                sharedBeans.map(bean => (
+                  <div key={bean.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                    <h3 className="text-lg font-semibold">
+                      {bean.brand || 'Unknown'} {bean.beanName || 'Bean'}
+                    </h3>
+                    <p className="flex justify-between">
+                      <span>Origin: {bean.origin || 'N/A'}</span>
+                      <span>Species: {bean.species || 'N/A'}</span>
+                    </p>
+                    <p>Roast: {bean.roast || 'N/A'}</p>
+                    <p>Roast Date: {bean.roastDate || 'N/A'}</p>
+                    <p>Added by: {bean.addedByNickname || 'Unknown'}</p>
+                    <button
+                      onClick={() => deleteBean(bean.id, true)}
+                      className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Add Brew Form */}
+          <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h2 className="text-xl font-semibold mb-4">Add New Brew</h2>
+            <form onSubmit={handleBrewSubmit} autoComplete="off" formNoValidate data-bitwarden-watching="0">
+              <div className="mb-4">
+                <label htmlFor="beanId" className="block text-sm font-medium text-gray-700">Select Bean</label>
+                <select
+                  name="beanId"
+                  id="beanId"
+                  value={brewForm.beanId}
+                  onChange={handleBrewInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                >
+                  <option value="">-- Select a Bean --</option>
+                  {personalBeans.map(bean => (
+                    <option key={bean.id} value={bean.id}>
+                      {bean.brand} {bean.beanName} {bean.species} {bean.roast} ({bean.origin}, Roasted: {bean.roastDate}) - Personal
+                    </option>
+                  ))}
+                  {sharedBeans.map(bean => (
+                    <option key={bean.id} value={bean.id}>
+                      {bean.brand} {bean.beanName} {bean.species} {bean.roast} ({bean.origin}, Roasted: {bean.roastDate}) - Shared
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="grindSize" className="block text-sm font-medium text-gray-700">Grind Size</label>
+                <select
+                  name="grindSize"
+                  id="grindSize"
+                  value={brewForm.grindSize}
+                  onChange={handleBrewInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                >
+                  <option value="">Select Grind Size</option>
+                  <option value="Fine">Fine</option>
+                  <option value="Medium-Fine">Medium-Fine</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Medium-Coarse">Medium-Coarse</option>
+                  <option value="Coarse">Coarse</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="brewType" className="block text-sm font-medium text-gray-700">Brew Type</label>
+                <select
+                  name="brewType"
+                  id="brewType"
+                  value={brewForm.brewType}
+                  onChange={handleBrewInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                >
+                  <option value="Espresso">Espresso</option>
+                  <option value="Americano">Americano</option>
+                  <option value="Cappuccino">Cappuccino</option>
+                  <option value="Pour Over">Pour Over</option>
+                  <option value="French Press">French Press</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="machine" className="block text-sm font-medium text-gray-700">Machine</label>
+                <input
+                  type="text"
+                  name="machine"
+                  id="machine"
+                  value={brewForm.machine}
+                  onChange={handleBrewInputChange}
+                  placeholder="e.g., De’Longhi Dedica"
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="rating" className="block text-sm font-medium text-gray-700">Rating (1-5)</label>
+                <select
+                  name="rating"
+                  id="rating"
+                  value={brewForm.rating}
+                  onChange={handleBrewInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                >
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <option key={n} value={n}>{n} Star{n > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="tasteNotes" className="block text-sm font-medium text-gray-700">Taste Notes</label>
+                <textarea
+                  name="tasteNotes"
+                  id="tasteNotes"
+                  value={brewForm.tasteNotes}
+                  onChange={handleBrewInputChange}
+                  placeholder="e.g., Nutty, bright acidity"
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="brewDate" className="block text-sm font-medium text-gray-700">Brew Date</label>
+                <input
+                  type="date"
+                  name="brewDate"
+                  id="brewDate"
+                  value={brewForm.brewDate}
+                  onChange={handleBrewInputChange}
+                  className="w-full p-2 border rounded"
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 active:bg-blue-600"
+              >
+                Save Brew
+              </button>
+            </form>
+            {error && <p className="text-red-500 mt-4">{error}</p>}
+          </div>
+
+          {/* Brew List */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Your Brews</h2>
+            {brews.length === 0 ? (
+              <p>No brews yet. Add one above!</p>
+            ) : (
+              brews.map(brew => {
+                const bean = getBeanDetails(brew.beanId);
+                return (
+                  <div key={brew.id} className="bg-white p-4 rounded-lg shadow-lg mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {brew.brewType}
+                      </h3>
+                      <p>Brew Date:<strong> {brew.brewDate}</strong></p>
+                      <p className="flex justify-between">
+                        <span>Grind Size: {brew.grindSize || 'N/A'}</span>
+                        <span>Machine: {brew.machine || 'N/A'}</span>
+                      </p>
+                      <p>Rating:<strong> {brew.rating} Star{brew.rating > 1 ? 's' : ''}</strong></p>
+                      <p>Taste Notes:<strong> {brew.tasteNotes || 'N/A'}</strong></p>
+                    </div>
+                    <hr className="border-t border-gray-300 my-2" />
+                    <div className="mb-2">
+                      <h3 className="text-lg font-semibold">
+                        {bean.brand || 'Unknown'} : {bean.beanName || 'Bean'}
+                      </h3>
+                      <p className="flex justify-between">
+                        <span>Roast: <strong>{bean.roast || 'N/A'}</strong></span>
+                        <span>Species: <strong> {bean.species || 'N/A'}</strong></span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span>Origin: {bean.origin || 'N/A'}</span>
+                        <span>Roast Date: {bean.roastDate || 'N/A'}</span>
+                      </p>
+                      <p>Added by: {bean.addedByNickname || 'Unknown'}</p>
+                    </div>
+                    <button
+                      onClick={() => deleteBrew(brew.id)}
+                      className="mt-2 bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 active:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Delay rendering until after page load to catch early unhandled rejections
+    window.addEventListener('load', () => {
+      ReactDOM.createRoot(document.getElementById('root')).render(
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      );
+    });
+
+    // Temporary test write function
+    const testWriteInvitation = async (user) => { // Accept user as a parameter
+      console.log('Attempting test write to invitations');
+      try {
+        if (!user || !user.uid) { // Add a check for the user object
+          console.error('Test write failed: User is not authenticated.');
+          return;
+        }
+        await db.collection('invitations').add({ test: true, userId: user.uid });
+        console.log('Test write successful');
+      } catch (error) {
+        console.error('Test write failed:', error);
+      }
+    };
+  </script>
+  <script>
+    // Clear service worker cache on load to prevent cached BitWarden scripts
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      }).catch(err => console.error('Service Worker Unregistration Error:', err));
+
+      // Register new service worker
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Registration Error:', err));
+    }
+  </script>
+</body>
+</html>
