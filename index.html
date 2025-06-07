@@ -132,7 +132,7 @@
     }
 
     // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
+    //firebase.initializeApp();
     const auth = firebase.auth();
     const db = firebase.firestore();
 
@@ -1126,5 +1126,6 @@
       navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker Registration Error:', err));
     }
   </script>
+  <script src="firebase-init.js"></script>
 </body>
 </html>
